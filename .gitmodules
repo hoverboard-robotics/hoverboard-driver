@@ -1,0 +1,3 @@
+[submodule "src/bipropellant-hoverboard-api"]
+	path = src/bipropellant-hoverboard-api
+	url = git@github.com:bipropellant/bipropellant-hoverboard-api.git
