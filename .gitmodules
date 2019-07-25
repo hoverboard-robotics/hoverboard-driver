@@ -1,3 +1,4 @@
-[submodule "src/bipropellant-hoverboard-api"]
-	path = src/bipropellant-hoverboard-api
+[submodule "bipropellant"]
+	path = src/bipropellant
 	url = git@github.com:bipropellant/bipropellant-hoverboard-api.git
+	branch = master
