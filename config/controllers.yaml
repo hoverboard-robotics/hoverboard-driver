@@ -27,8 +27,8 @@ hoverboard:
   linear:
     x:
       has_velocity_limits    : true
-      max_velocity           : 1.0  # m/s
-      min_velocity           : -0.5 # m/s
+      max_velocity           : 5.6  # m/s
+      min_velocity           : -5.6 # m/s
       has_acceleration_limits: true
       max_acceleration       : 0.8  # m/s^2
       min_acceleration       : -0.4 # m/s^2

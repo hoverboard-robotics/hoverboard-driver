@@ -54,24 +54,27 @@ Hoverboard::~Hoverboard() {
 }
 
 void Hoverboard::read() {
-   api->requestRead(HoverboardAPI::Codes::sensHall, PROTOCOL_SOM_NOACK);
+    api->requestRead(HoverboardAPI::Codes::sensHall, PROTOCOL_SOM_NOACK);
+    api->requestRead(HoverboardAPI::Codes::sensElectrical, PROTOCOL_SOM_NOACK);
 
-   if (port_fd != -1) {
-       const int max_length = 1024; // HoverboardAPI limit
-       unsigned char c;
-       int i = 0, r = 0;
+    if (port_fd != -1) {
+        const int max_length = 1024; // HoverboardAPI limit
+        unsigned char c;
+        int i = 0, r = 0;
 
-       while ((r = ::read(port_fd, &c, 1)) > 0 && i++ < 1024) {
-           api->protocolPush(c);
-       }
+        while ((r = ::read(port_fd, &c, 1)) > 0 && i++ < 1024) {
+            api->protocolPush(c);
+        }
 
-       if (r < 0) {
-           ROS_ERROR("Reading from serial %s failed: %d", PORT, r);
-       }
-   }
+        if (r < 0) {
+            ROS_ERROR("Reading from serial %s failed: %d", PORT, r);
+        }
+    }
 
-   joints[0].vel = api->getSpeed0_mms();
-   joints[1].vel = api->getSpeed1_mms();
+    joints[0].vel = api->getSpeed0_mms();
+    joints[1].vel = api->getSpeed1_mms();
+
+    printf("Speeds: [%.2f, %.2f]. Voltage %.2f\n", joints[0].vel, joints[1].vel, api->getBatteryVoltage());
 }
 
 void Hoverboard::write() {
@@ -80,7 +83,14 @@ void Hoverboard::write() {
         return;
     }
 
-    api->sendPWM(joints[0].cmd, joints[1].cmd, PROTOCOL_SOM_NOACK);
+    // TODO FIXME: convert m/s to PWM (0-1000)
+    // Let's assume Vmax=20 km/h = 5.6 m/s.
+    // [0-5.6] -> [0-1000]
+    // out = in * 1000 / 5.6
+    int16_t cmd0 = joints[0].cmd * 1000 / 5.6;
+    int16_t cmd1 = joints[1].cmd * 1000 / 5.6;
+
+    api->sendPWM(cmd0, cmd1, PROTOCOL_SOM_NOACK);
 }
 
 void Hoverboard::tick() {
