@@ -1,0 +1,6 @@
+hoverboard:
+  hardware_interface:
+     loop_hz: 20 # hz
+     joints:
+       - left_wheel
+       - right_wheel

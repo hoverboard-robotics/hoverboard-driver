@@ -1,0 +1,11 @@
+<launch>
+    <rosparam file="$(find hoverboard_driver)/config/hardware.yaml" command="load"/>
+    <rosparam file="$(find hoverboard_driver)/config/controllers.yaml" command="load"/>
+    <node name="hoverboard_driver" pkg="hoverboard_driver" type="hoverboard_driver" output="screen"/>
+    <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" ns="/"
+        args="
+            /hoverboard/controller/state
+            /hoverboard/controller/position/left_wheel
+            /hoverboard/controller/position/right_wheel
+        "/>
+</launch>

@@ -5,6 +5,8 @@
 #include <hardware_interface/robot_hw.h>
 #include <realtime_tools/realtime_buffer.h>
 
+class HoverboardAPI;
+
 class Hoverboard : public hardware_interface::RobotHW {
 public:
     Hoverboard();
@@ -12,6 +14,7 @@ public:
 
     void read();
     void write();
+    void tick();
 
 private:
     hardware_interface::JointStateInterface joint_state_interface;
@@ -23,4 +26,6 @@ private:
         double eff;
         double cmd;
     } joints[2];
+
+    HoverboardAPI *api;
 };

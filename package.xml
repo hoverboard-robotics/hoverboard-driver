@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>hoverboard-driver</name>
+  <name>hoverboard_driver</name>
   <version>0.0.1</version>
   <description>Driver for hoverboard motors</description>
   <maintainer email="road.and.track@gmail.com">road.and.track@gmail.com</maintainer>
