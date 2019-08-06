@@ -32,18 +32,19 @@ Hoverboard::Hoverboard() {
     }
     
     //CONFIGURE THE UART
-	//The flags (defined in /usr/include/termios.h - see http://pubs.opengroup.org/onlinepubs/007908799/xsh/termios.h.html):
-	struct termios options;
-	tcgetattr(port_fd, &options);
-	options.c_cflag = B9600 | CS8 | CLOCAL | CREAD;		//<Set baud rate
-	options.c_iflag = IGNPAR;
-	options.c_oflag = 0;
-	options.c_lflag = 0;
-	tcflush(port_fd, TCIFLUSH);
-	tcsetattr(port_fd, TCSANOW, &options);
+    //The flags (defined in /usr/include/termios.h - see http://pubs.opengroup.org/onlinepubs/007908799/xsh/termios.h.html):
+    struct termios options;
+    tcgetattr(port_fd, &options);
+    options.c_cflag = B115200 | CS8 | CLOCAL | CREAD;		//<Set baud rate
+    options.c_iflag = IGNPAR;
+    options.c_oflag = 0;
+    options.c_lflag = 0;
+    tcflush(port_fd, TCIFLUSH);
+    tcsetattr(port_fd, TCSANOW, &options);
 
     api = new HoverboardAPI(serialWrite);
-    api->requestRead(HoverboardAPI::Codes::sensHall, PROTOCOL_SOM_NOACK);
+    api->scheduleRead(HoverboardAPI::Codes::sensHall, -1, 1000, PROTOCOL_SOM_NOACK);
+    api->scheduleRead(HoverboardAPI::Codes::sensElectrical, -1, 1000, PROTOCOL_SOM_NOACK);
 }
 
 Hoverboard::~Hoverboard() {
@@ -54,9 +55,6 @@ Hoverboard::~Hoverboard() {
 }
 
 void Hoverboard::read() {
-    api->requestRead(HoverboardAPI::Codes::sensHall, PROTOCOL_SOM_NOACK);
-    api->requestRead(HoverboardAPI::Codes::sensElectrical, PROTOCOL_SOM_NOACK);
-
     if (port_fd != -1) {
         const int max_length = 1024; // HoverboardAPI limit
         unsigned char c;
@@ -66,15 +64,15 @@ void Hoverboard::read() {
             api->protocolPush(c);
         }
 
-        if (r < 0) {
-            ROS_ERROR("Reading from serial %s failed: %d", PORT, r);
-        }
+	if (r < 0 && errno != EAGAIN) {
+	  ROS_ERROR("Reading from serial %s failed: %d", PORT, r);
+	}
     }
 
     joints[0].vel = api->getSpeed0_mms();
     joints[1].vel = api->getSpeed1_mms();
 
-    printf("Speeds: [%.2f, %.2f]. Voltage %.2f\n", joints[0].vel, joints[1].vel, api->getBatteryVoltage());
+    printf("Speeds: [%.2f, %.2f]. Voltage %.2f\n", api->getSpeed0_mms(), api->getSpeed1_mms(), api->getBatteryVoltage());
 }
 
 void Hoverboard::write() {
@@ -95,4 +93,5 @@ void Hoverboard::write() {
 
 void Hoverboard::tick() {
     api->protocolTick();
+    //    api->printStats();
 }
