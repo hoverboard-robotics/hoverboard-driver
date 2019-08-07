@@ -27,5 +27,8 @@ private:
         double cmd;
     } joints[2];
 
+    double max_linear_speed;
+    double wheel_radius;
+
     HoverboardAPI *api;
 };

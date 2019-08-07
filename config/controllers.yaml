@@ -1,4 +1,8 @@
-hoverboard:
+hoverboard_joint_publisher:
+  type: "joint_state_controller/JointStateController"
+  publish_rate: 50
+
+hoverboard_velocity_controller:
   type        : "diff_drive_controller/DiffDriveController"
   left_wheel  : 'left_wheel'
   right_wheel : 'right_wheel'
@@ -10,7 +14,7 @@ hoverboard:
   # diff_drive_controller will attempt to read either one or both from the
   # URDF if not specified as a parameter
   wheel_separation : 0.32
-  wheel_radius : 0.165
+  wheel_radius : 0.0825
 
   # Wheel separation and radius multipliers
   wheel_separation_multiplier: 1.0 # default: 1.0
@@ -28,16 +32,14 @@ hoverboard:
     x:
       has_velocity_limits    : true
       max_velocity           : 5.6  # m/s
-      min_velocity           : -5.6 # m/s
       has_acceleration_limits: true
       max_acceleration       : 0.8  # m/s^2
-      min_acceleration       : -0.4 # m/s^2
       has_jerk_limits        : true
       max_jerk               : 5.0  # m/s^3
   angular:
     z:
       has_velocity_limits    : true
-      max_velocity           : 1.7  # rad/s
+      max_velocity           : 6.28  # rad/s
       has_acceleration_limits: true
       max_acceleration       : 1.5  # rad/s^2
       has_jerk_limits        : true

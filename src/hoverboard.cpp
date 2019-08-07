@@ -26,6 +26,10 @@ Hoverboard::Hoverboard() {
     velocity_joint_interface.registerHandle (right_wheel_vel_handle);
     registerInterface(&velocity_joint_interface);
 
+    // FIXME! Read parameters
+    max_linear_speed = 5.6;
+    wheel_radius = 0.0825;
+
     if ((port_fd = open(PORT, O_RDWR | O_NOCTTY | O_NDELAY)) < 0) {
         ROS_FATAL("Cannot open serial port to hoverboard");
         exit(-1);
@@ -72,7 +76,7 @@ void Hoverboard::read() {
     joints[0].vel = api->getSpeed0_mms();
     joints[1].vel = api->getSpeed1_mms();
 
-    printf("Speeds: [%.2f, %.2f]. Voltage %.2f\n", api->getSpeed0_mms(), api->getSpeed1_mms(), api->getBatteryVoltage());
+    //    printf("Speeds: [%.2f, %.2f]. Voltage %.2f\n", api->getSpeed0_mms(), api->getSpeed1_mms(), api->getBatteryVoltage());
 }
 
 void Hoverboard::write() {
@@ -85,10 +89,15 @@ void Hoverboard::write() {
     // Let's assume Vmax=20 km/h = 5.6 m/s.
     // [0-5.6] -> [0-1000]
     // out = in * 1000 / 5.6
-    int16_t cmd0 = joints[0].cmd * 1000 / 5.6;
-    int16_t cmd1 = joints[1].cmd * 1000 / 5.6;
+    int16_t left_cmd = (joints[0].cmd * wheel_radius) * 1000 / max_linear_speed;
+    int16_t right_cmd = (joints[1].cmd * wheel_radius) * 1000 / max_linear_speed;
 
-    api->sendPWM(cmd0, cmd1, PROTOCOL_SOM_NOACK);
+    if (joints[0].cmd != 0 || joints[1].cmd != 0) {
+      printf("Control: %.2f %.2f -> %d %d\n", joints[0].cmd, joints[1].cmd, left_cmd, right_cmd);
+    }
+
+    api->sendDifferentialPWM(left_cmd, right_cmd);
+    //    api->sendPWM(cmd0, cmd1, PROTOCOL_SOM_NOACK);
 }
 
 void Hoverboard::tick() {
