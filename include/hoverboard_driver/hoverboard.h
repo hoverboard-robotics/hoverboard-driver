@@ -20,6 +20,7 @@ private:
     hardware_interface::JointStateInterface joint_state_interface;
     hardware_interface::VelocityJointInterface velocity_joint_interface;
 
+    // The units for wheels are radians (pos), radians per second (vel,cmd), and Netwton metres (eff)
     struct Joint {
         double pos;
         double vel;
