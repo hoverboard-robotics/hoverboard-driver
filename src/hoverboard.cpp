@@ -73,10 +73,10 @@ void Hoverboard::read() {
     }
 
     // Convert m/s to rad/s
-    joints[1].vel = DIRECTION_CORRECTION * api->getSpeed0_mms() / wheel_radius;
-    joints[0].vel = DIRECTION_CORRECTION * api->getSpeed1_mms() / wheel_radius;
-    joints[1].pos = DIRECTION_CORRECTION * api->getPosition0_mm() / wheel_radius;
-    joints[0].pos = DIRECTION_CORRECTION * api->getPosition1_mm() / wheel_radius;
+    joints[0].vel = DIRECTION_CORRECTION * api->getSpeed0_mms() / wheel_radius;
+    joints[1].vel = DIRECTION_CORRECTION * api->getSpeed1_mms() / wheel_radius;
+    joints[0].pos = DIRECTION_CORRECTION * api->getPosition0_mm() / wheel_radius;
+    joints[1].pos = DIRECTION_CORRECTION * api->getPosition1_mm() / wheel_radius;
     //    printf("Speeds: [%.2f, %.2f]. Voltage %.2f\n", api->getSpeed0_mms(), api->getSpeed1_mms(), api->getBatteryVoltage());
 }
 
@@ -92,9 +92,8 @@ void Hoverboard::write() {
     // out = in * 1000 / 5.6
 
     // Convert rad/s to m/s
-    int16_t left_cmd = DIRECTION_CORRECTION * (joints[1].cmd * wheel_radius) * 1000 / max_linear_speed;
-    int16_t right_cmd = DIRECTION_CORRECTION * (joints[0].cmd * wheel_radius) * 1000 / max_linear_speed;
-
+    int16_t left_cmd = DIRECTION_CORRECTION * (joints[0].cmd * wheel_radius) * 1000 / max_linear_speed;
+    int16_t right_cmd = DIRECTION_CORRECTION * (joints[1].cmd * wheel_radius) * 1000 / max_linear_speed;
     if (joints[0].cmd != 0 || joints[1].cmd != 0) {
       printf("Control: %.2f %.2f -> %d %d\n", joints[0].cmd, joints[1].cmd, left_cmd, right_cmd);
     }
