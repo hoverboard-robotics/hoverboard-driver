@@ -1,6 +1,6 @@
 robaka:
   hardware_interface:
-     loop_hz: 20 # hz
+     loop_hz: 50 # hz
      joints:
        - left_wheel
        - right_wheel

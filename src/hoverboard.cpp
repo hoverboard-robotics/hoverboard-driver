@@ -67,9 +67,17 @@ void Hoverboard::read() {
             api->protocolPush(c);
         }
 
+	if (i > 0) {
+	  last_read = ros::Time::now();
+	}
+
 	if (r < 0 && errno != EAGAIN) {
 	  ROS_ERROR("Reading from serial %s failed: %d", PORT, r);
 	}
+    }
+
+    if ((ros::Time::now() - last_read).toSec() > 1) {
+      ROS_FATAL("Timeout reading from serial %s failed", PORT);
     }
 
     // Convert m/s to rad/s
@@ -77,10 +85,10 @@ void Hoverboard::read() {
     joints[1].vel = DIRECTION_CORRECTION * (api->getSpeed1_mms() / 1000.0) / wheel_radius;
     joints[0].pos = DIRECTION_CORRECTION * (api->getPosition0_mm() / 1000.0) / wheel_radius;
     joints[1].pos = DIRECTION_CORRECTION * (api->getPosition1_mm() / 1000.0) / wheel_radius;
-    printf("Speeds: [%.2f, %.2f]. Positions: [%.2f, %.2f]. Voltage %.2f\n",
-	   joints[0].vel, joints[1].vel,
-	   joints[0].pos, joints[1].pos,
-	   api->getBatteryVoltage());
+    // printf("Speeds: [%.2f, %.2f]. Positions: [%.2f, %.2f]. Voltage %.2f\n",
+    //  	   joints[0].vel, joints[1].vel,
+    //  	   joints[0].pos, joints[1].pos,
+    //  	   api->getBatteryVoltage());
 }
 
 void Hoverboard::write() {
@@ -105,9 +113,9 @@ void Hoverboard::write() {
 
     double left_speed = DIRECTION_CORRECTION * joints[0].cmd * wheel_radius;
     double right_speed = DIRECTION_CORRECTION * joints[1].cmd * wheel_radius;
-    if (joints[0].cmd != 0 || joints[1].cmd != 0) {
-      printf("Control: %.2f %.2f -> %.2f %.2f\n", joints[0].cmd, joints[1].cmd, left_speed, right_speed);
-    }
+    // if (joints[0].cmd != 0 || joints[1].cmd != 0) {
+    //   printf("Control: %.2f %.2f -> %.2f %.2f\n", joints[0].cmd, joints[1].cmd, left_speed, right_speed);
+    // }
     api->sendSpeedData (left_speed, right_speed);    
 }
 

@@ -31,5 +31,7 @@ private:
     double max_linear_speed;
     double wheel_radius;
 
+    ros::Time last_read;
+
     HoverboardAPI *api;
 };
