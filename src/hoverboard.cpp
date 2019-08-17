@@ -26,7 +26,6 @@ Hoverboard::Hoverboard() {
     velocity_joint_interface.registerHandle (right_wheel_vel_handle);
     registerInterface(&velocity_joint_interface);
 
-
     // For DEBUG ONLY
     left_pos_pub = nh.advertise<std_msgs::Float64>("hoverboard/left_wheel/position", 3);
     right_pos_pub = nh.advertise<std_msgs::Float64>("hoverboard/right_wheel/position", 3);
@@ -78,6 +77,7 @@ void Hoverboard::reconfigure_callback(hoverboard_driver::HoverboardConfig& _conf
   config = _config;
   have_config = true;
 
+  printf("Reconfigured PID to [%d, %d, %d, %d]\n", config.Kp, config.Ki, config.Kd, config.Incr);
   api->sendPIDControl(config.Kp, config.Ki, config.Kd, config.Incr);
 }
 
@@ -108,7 +108,7 @@ void Hoverboard::read() {
     double sens_speed0 = api->getSpeed0_mms();
     double sens_speed1 = api->getSpeed1_mms();
 
-    printf("[%.3f] ", ros::Time::now().toSec());
+    //    printf("[%.3f] ", ros::Time::now().toSec());
 
     // basic sanity check, speed should be less than 10 m/s
     if (fabs(sens_speed0) < 10000 && fabs(sens_speed1) < 10000) { 
@@ -122,14 +122,14 @@ void Hoverboard::read() {
       left_pos_pub.publish(joints[0].pos);
       right_pos_pub.publish(joints[1].pos);
     } else {
-      printf(" Stupid speeds of [%.2f, %.2f] ignored\n", sens_speed0, sens_speed1);
+      //      printf(" Stupid speeds of [%.2f, %.2f] ignored\n", sens_speed0, sens_speed1);
     }
 
-    printf(" Cmd [%.2f, %.2f]. Speeds: [%.2f, %.2f]. Positions: [%.2f, %.2f]. Voltage %.2f\n",
-	   joints[0].cmd, joints[1].cmd,
-     	   joints[0].vel, joints[1].vel,
-     	   joints[0].pos, joints[1].pos,
-     	   api->getBatteryVoltage());
+    // printf(" Cmd [%.2f, %.2f]. Speeds: [%.2f, %.2f]. Positions: [%.2f, %.2f]. Voltage %.2f\n",
+    // 	   joints[0].cmd, joints[1].cmd,
+    //  	   joints[0].vel, joints[1].vel,
+    //  	   joints[0].pos, joints[1].pos,
+    //  	   api->getBatteryVoltage());
 }
 
 void Hoverboard::write() {
