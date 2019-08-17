@@ -36,6 +36,7 @@
   <exec_depend>std_msgs</exec_depend>
   <exec_depend>hardware_interface</exec_depend>
   <exec_depend>controller_manager</exec_depend>
+  <depend>dynamic_reconfigure</depend>
 
   <export>
   </export>

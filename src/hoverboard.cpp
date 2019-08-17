@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <termios.h>
+#include <dynamic_reconfigure/server.h>
 
 int port_fd = -1;
 
@@ -59,6 +60,11 @@ Hoverboard::Hoverboard() {
     api = new HoverboardAPI(serialWrite);
     api->scheduleRead(HoverboardAPI::Codes::sensHall, -1, 20, PROTOCOL_SOM_NOACK);
     api->scheduleRead(HoverboardAPI::Codes::sensElectrical, -1, 20, PROTOCOL_SOM_NOACK);
+
+    dsrv = new dynamic_reconfigure::Server<hoverboard_driver::HoverboardConfig>(ros::NodeHandle("~"));
+    dynamic_reconfigure::Server<hoverboard_driver::HoverboardConfig>::CallbackType cb = boost::bind(&Hoverboard::reconfigure_callback, this, _1, _2);
+    dsrv->setCallback(cb);
+
 }
 
 Hoverboard::~Hoverboard() {
@@ -66,6 +72,13 @@ Hoverboard::~Hoverboard() {
         close(port_fd);
 
     delete api;
+}
+
+void Hoverboard::reconfigure_callback(hoverboard_driver::HoverboardConfig& _config, uint32_t level) {
+  config = _config;
+  have_config = true;
+
+  api->sendPIDControl(config.Kp, config.Ki, config.Kd, config.Incr);
 }
 
 void Hoverboard::read() {
@@ -137,18 +150,15 @@ void Hoverboard::write() {
     //   printf("Control: %.2f %.2f -> %d %d\n", joints[0].cmd, joints[1].cmd, left_cmd, right_cmd);
     // }
 
-    // api->sendDifferentialPWM(left_cmd, right_cmd);
-
-
     left_cmd_pub.publish(joints[0].cmd);
     right_cmd_pub.publish(joints[1].cmd);
 
     double left_speed = DIRECTION_CORRECTION * joints[0].cmd * wheel_radius;
     double right_speed = DIRECTION_CORRECTION * joints[1].cmd * wheel_radius;
-    // if (joints[0].cmd != 0 || joints[1].cmd != 0) {
-    //   printf("Control: %.2f %.2f -> %.2f %.2f\n", joints[0].cmd, joints[1].cmd, left_speed, right_speed);
-    // }
-    api->sendSpeedData (left_speed, right_speed);    
+
+    const int max_power = have_config ? config.MaxPwr : 100;
+    const int min_speed = have_config ? config.MinSpd : 40;
+    api->sendSpeedData (left_speed, right_speed, max_power, min_speed);
 }
 
 void Hoverboard::tick() {

@@ -8,11 +8,15 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   hardware_interface
   controller_manager
+  dynamic_reconfigure
 )
 
 ## System dependencies are found with CMake's conventions
 find_package(Boost REQUIRED COMPONENTS system)
 
+generate_dynamic_reconfigure_options(
+  config/Hoverboard.cfg
+)
 
 catkin_package(
   INCLUDE_DIRS include
@@ -40,6 +44,8 @@ add_executable(${PROJECT_NAME}
   src/bipropellant/src/hbprotocol/machine_protocol.c
 )
 target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${Boost_LIBRARIES})
+
+add_dependencies(hoverboard_driver ${PROJECT_NAME}_gencfg)
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
