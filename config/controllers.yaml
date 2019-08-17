@@ -27,15 +27,15 @@ hoverboard_velocity_controller:
   base_frame_id: base_footprint #default: base_link
 #  base_frame_id: base_link
   allow_multiple_cmd_vel_publishers: true
-#  odom_frame_id: 'raw_odom'
-#  enable_odom_tf: false
+  odom_frame_id: '/raw_odom'
+  enable_odom_tf: false
 
   # Velocity and acceleration limits
   # Whenever a min_* is unspecified, default to -max_*
   linear:
     x:
       has_velocity_limits    : true
-      max_velocity           : 5.6  # m/s
+      max_velocity           : 2.0  # m/s
       has_acceleration_limits: true
       max_acceleration       : 0.1  # m/s^2
       has_jerk_limits        : true
@@ -45,6 +45,6 @@ hoverboard_velocity_controller:
       has_velocity_limits    : true
       max_velocity           : 6.28  # rad/s
       has_acceleration_limits: true
-      max_acceleration       : 1.5  # rad/s^2
+      max_acceleration       : 3.14  # rad/s^2
       has_jerk_limits        : true
-      max_jerk               : 2.5  # rad/s^3
+      max_jerk               : 3.14  # rad/s^3

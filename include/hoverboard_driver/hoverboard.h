@@ -4,6 +4,7 @@
 #include <hardware_interface/joint_state_interface.h>
 #include <hardware_interface/robot_hw.h>
 #include <realtime_tools/realtime_buffer.h>
+#include <std_msgs/Float64.h>
 
 class HoverboardAPI;
 
@@ -34,4 +35,12 @@ private:
     ros::Time last_read;
 
     HoverboardAPI *api;
+
+
+    // For debug purposes
+    ros::NodeHandle nh;
+    ros::Publisher left_pos_pub, right_pos_pub;
+    ros::Publisher left_vel_pub, right_vel_pub;
+    ros::Publisher left_eff_pub, right_eff_pub;
+    ros::Publisher left_cmd_pub, right_cmd_pub;
 };

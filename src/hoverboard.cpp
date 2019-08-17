@@ -25,6 +25,17 @@ Hoverboard::Hoverboard() {
     velocity_joint_interface.registerHandle (right_wheel_vel_handle);
     registerInterface(&velocity_joint_interface);
 
+
+    // For DEBUG ONLY
+    left_pos_pub = nh.advertise<std_msgs::Float64>("hoverboard/left_wheel/position", 3);
+    right_pos_pub = nh.advertise<std_msgs::Float64>("hoverboard/right_wheel/position", 3);
+    left_vel_pub = nh.advertise<std_msgs::Float64>("hoverboard/left_wheel/velocity", 3);
+    right_vel_pub = nh.advertise<std_msgs::Float64>("hoverboard/right_wheel/velocity", 3);
+    left_eff_pub = nh.advertise<std_msgs::Float64>("hoverboard/left_wheel/eff", 3);
+    right_eff_pub = nh.advertise<std_msgs::Float64>("hoverboard/right_wheel/eff", 3);
+    left_cmd_pub = nh.advertise<std_msgs::Float64>("hoverboard/left_wheel/cmd", 3);
+    right_cmd_pub = nh.advertise<std_msgs::Float64>("hoverboard/right_wheel/cmd", 3);
+    
     // FIXME! Read parameters
     max_linear_speed = 5.6;
     wheel_radius = 0.0825;
@@ -46,8 +57,8 @@ Hoverboard::Hoverboard() {
     tcsetattr(port_fd, TCSANOW, &options);
 
     api = new HoverboardAPI(serialWrite);
-    api->scheduleRead(HoverboardAPI::Codes::sensHall, -1, 1000, PROTOCOL_SOM_NOACK);
-    api->scheduleRead(HoverboardAPI::Codes::sensElectrical, -1, 1000, PROTOCOL_SOM_NOACK);
+    api->scheduleRead(HoverboardAPI::Codes::sensHall, -1, 20, PROTOCOL_SOM_NOACK);
+    api->scheduleRead(HoverboardAPI::Codes::sensElectrical, -1, 20, PROTOCOL_SOM_NOACK);
 }
 
 Hoverboard::~Hoverboard() {
@@ -81,14 +92,31 @@ void Hoverboard::read() {
     }
 
     // Convert m/s to rad/s
-    joints[0].vel = DIRECTION_CORRECTION * (api->getSpeed0_mms() / 1000.0) / wheel_radius;
-    joints[1].vel = DIRECTION_CORRECTION * (api->getSpeed1_mms() / 1000.0) / wheel_radius;
-    joints[0].pos = DIRECTION_CORRECTION * (api->getPosition0_mm() / 1000.0) / wheel_radius;
-    joints[1].pos = DIRECTION_CORRECTION * (api->getPosition1_mm() / 1000.0) / wheel_radius;
-    // printf("Speeds: [%.2f, %.2f]. Positions: [%.2f, %.2f]. Voltage %.2f\n",
-    //  	   joints[0].vel, joints[1].vel,
-    //  	   joints[0].pos, joints[1].pos,
-    //  	   api->getBatteryVoltage());
+    double sens_speed0 = api->getSpeed0_mms();
+    double sens_speed1 = api->getSpeed1_mms();
+
+    printf("[%.3f] ", ros::Time::now().toSec());
+
+    // basic sanity check, speed should be less than 10 m/s
+    if (fabs(sens_speed0) < 10000 && fabs(sens_speed1) < 10000) { 
+      joints[0].vel = DIRECTION_CORRECTION * (sens_speed0 / 1000.0) / wheel_radius;
+      joints[1].vel = DIRECTION_CORRECTION * (sens_speed1 / 1000.0) / wheel_radius;
+      joints[0].pos = DIRECTION_CORRECTION * (api->getPosition0_mm() / 1000.0) / wheel_radius;
+      joints[1].pos = DIRECTION_CORRECTION * (api->getPosition1_mm() / 1000.0) / wheel_radius;
+
+      left_vel_pub.publish(joints[0].vel);
+      right_vel_pub.publish(joints[1].vel);
+      left_pos_pub.publish(joints[0].pos);
+      right_pos_pub.publish(joints[1].pos);
+    } else {
+      printf(" Stupid speeds of [%.2f, %.2f] ignored\n", sens_speed0, sens_speed1);
+    }
+
+    printf(" Cmd [%.2f, %.2f]. Speeds: [%.2f, %.2f]. Positions: [%.2f, %.2f]. Voltage %.2f\n",
+	   joints[0].cmd, joints[1].cmd,
+     	   joints[0].vel, joints[1].vel,
+     	   joints[0].pos, joints[1].pos,
+     	   api->getBatteryVoltage());
 }
 
 void Hoverboard::write() {
@@ -110,6 +138,10 @@ void Hoverboard::write() {
     // }
 
     // api->sendDifferentialPWM(left_cmd, right_cmd);
+
+
+    left_cmd_pub.publish(joints[0].cmd);
+    right_cmd_pub.publish(joints[1].cmd);
 
     double left_speed = DIRECTION_CORRECTION * joints[0].cmd * wheel_radius;
     double right_speed = DIRECTION_CORRECTION * joints[1].cmd * wheel_radius;
