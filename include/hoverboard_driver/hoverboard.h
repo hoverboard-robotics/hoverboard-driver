@@ -31,20 +31,18 @@ private:
         double cmd;
     } joints[2];
 
-    double max_linear_speed;
     double wheel_radius;
-
     ros::Time last_read;
-
     HoverboardAPI *api;
 
-    // For debug purposes
+    // For debug purposes only
     ros::NodeHandle nh;
     ros::Publisher left_pos_pub, right_pos_pub;
     ros::Publisher left_vel_pub, right_vel_pub;
     ros::Publisher left_eff_pub, right_eff_pub;
     ros::Publisher left_cmd_pub, right_cmd_pub;
 
+    // Supporting dynamic reconfigure for PID control
     dynamic_reconfigure::Server<hoverboard_driver::HoverboardConfig> *dsrv;
     void reconfigure_callback(hoverboard_driver::HoverboardConfig& config, uint32_t level);
     hoverboard_driver::HoverboardConfig config;

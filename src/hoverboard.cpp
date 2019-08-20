@@ -26,7 +26,7 @@ Hoverboard::Hoverboard() {
     velocity_joint_interface.registerHandle (right_wheel_vel_handle);
     registerInterface(&velocity_joint_interface);
 
-    // For DEBUG ONLY
+    // These publishers are only for debugging purposes
     left_pos_pub = nh.advertise<std_msgs::Float64>("hoverboard/left_wheel/position", 3);
     right_pos_pub = nh.advertise<std_msgs::Float64>("hoverboard/right_wheel/position", 3);
     left_vel_pub = nh.advertise<std_msgs::Float64>("hoverboard/left_wheel/velocity", 3);
@@ -36,17 +36,16 @@ Hoverboard::Hoverboard() {
     left_cmd_pub = nh.advertise<std_msgs::Float64>("hoverboard/left_wheel/cmd", 3);
     right_cmd_pub = nh.advertise<std_msgs::Float64>("hoverboard/right_wheel/cmd", 3);
     
-    // FIXME! Read parameters
-    max_linear_speed = 5.6;
-    wheel_radius = 0.0825;
+    // FIXME! Read parameters from ROS
+    wheel_radius = WHEEL_RADIUS;
 
     if ((port_fd = open(PORT, O_RDWR | O_NOCTTY | O_NDELAY)) < 0) {
         ROS_FATAL("Cannot open serial port to hoverboard");
         exit(-1);
     }
     
-    //CONFIGURE THE UART
-    //The flags (defined in /usr/include/termios.h - see http://pubs.opengroup.org/onlinepubs/007908799/xsh/termios.h.html):
+    // CONFIGURE THE UART -- connecting to the board
+    // The flags (defined in /usr/include/termios.h - see http://pubs.opengroup.org/onlinepubs/007908799/xsh/termios.h.html):
     struct termios options;
     tcgetattr(port_fd, &options);
     options.c_cflag = B115200 | CS8 | CLOCAL | CREAD;		//<Set baud rate
@@ -60,6 +59,7 @@ Hoverboard::Hoverboard() {
     api->scheduleRead(HoverboardAPI::Codes::sensHall, -1, 20, PROTOCOL_SOM_NOACK);
     api->scheduleRead(HoverboardAPI::Codes::sensElectrical, -1, 20, PROTOCOL_SOM_NOACK);
 
+    // Support dynamic reconfigure
     dsrv = new dynamic_reconfigure::Server<hoverboard_driver::HoverboardConfig>(ros::NodeHandle("~"));
     dynamic_reconfigure::Server<hoverboard_driver::HoverboardConfig>::CallbackType cb = boost::bind(&Hoverboard::reconfigure_callback, this, _1, _2);
     dsrv->setCallback(cb);
@@ -110,7 +110,9 @@ void Hoverboard::read() {
 
     //    printf("[%.3f] ", ros::Time::now().toSec());
 
-    // basic sanity check, speed should be less than 10 m/s
+    // Basic sanity check, speed should be less than 10 m/s
+    // Sometimes, it seems during EMI peaks, we're getting ridiculous values here
+    // Don't know what to do with it, just ignoring for now
     if (fabs(sens_speed0) < 10000 && fabs(sens_speed1) < 10000) { 
       joints[0].vel = DIRECTION_CORRECTION * (sens_speed0 / 1000.0) / wheel_radius;
       joints[1].vel = DIRECTION_CORRECTION * (sens_speed1 / 1000.0) / wheel_radius;
@@ -124,12 +126,6 @@ void Hoverboard::read() {
     } else {
       //      printf(" Stupid speeds of [%.2f, %.2f] ignored\n", sens_speed0, sens_speed1);
     }
-
-    // printf(" Cmd [%.2f, %.2f]. Speeds: [%.2f, %.2f]. Positions: [%.2f, %.2f]. Voltage %.2f\n",
-    // 	   joints[0].cmd, joints[1].cmd,
-    //  	   joints[0].vel, joints[1].vel,
-    //  	   joints[0].pos, joints[1].pos,
-    //  	   api->getBatteryVoltage());
 }
 
 void Hoverboard::write() {
@@ -138,24 +134,15 @@ void Hoverboard::write() {
         return;
     }
 
-    // TODO FIXME: convert m/s to PWM (0-1000)
-    // Let's assume Vmax=20 km/h = 5.6 m/s.
-    // [0-5.6] -> [0-1000]
-    // out = in * 1000 / 5.6
-
-    // Convert rad/s to m/s
-    // int16_t left_cmd = DIRECTION_CORRECTION * (joints[0].cmd * wheel_radius) * 1000 / max_linear_speed;
-    // int16_t right_cmd = DIRECTION_CORRECTION * (joints[1].cmd * wheel_radius) * 1000 / max_linear_speed;
-    // if (joints[0].cmd != 0 || joints[1].cmd != 0) {
-    //   printf("Control: %.2f %.2f -> %d %d\n", joints[0].cmd, joints[1].cmd, left_cmd, right_cmd);
-    // }
-
+    // Inform interested parties about the commands we've got
     left_cmd_pub.publish(joints[0].cmd);
     right_cmd_pub.publish(joints[1].cmd);
 
+    // Convert rad/s to m/s
     double left_speed = DIRECTION_CORRECTION * joints[0].cmd * wheel_radius;
     double right_speed = DIRECTION_CORRECTION * joints[1].cmd * wheel_radius;
 
+    // Cap according to dynamic_reconfigure
     const int max_power = have_config ? config.MaxPwr : 100;
     const int min_speed = have_config ? config.MinSpd : 40;
     api->sendSpeedData (left_speed, right_speed, max_power, min_speed);
