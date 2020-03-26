@@ -14,14 +14,14 @@ int serialWrite(unsigned char *data, int len) {
 }
 
 Hoverboard::Hoverboard() {
-    hardware_interface::JointStateHandle left_wheel_state_handle("left_wheel", &joints[0].pos, &joints[0].vel, &joints[0].eff);
-    hardware_interface::JointStateHandle right_wheel_state_handle("right_wheel", &joints[1].pos, &joints[1].vel, &joints[1].eff);
+    hardware_interface::JointStateHandle left_wheel_state_handle("left_wheel", &joints[0].pos.data, &joints[0].vel.data, &joints[0].eff.data);
+    hardware_interface::JointStateHandle right_wheel_state_handle("right_wheel", &joints[1].pos.data, &joints[1].vel.data, &joints[1].eff.data);
     joint_state_interface.registerHandle (left_wheel_state_handle);
     joint_state_interface.registerHandle (right_wheel_state_handle);
     registerInterface(&joint_state_interface);
 
-    hardware_interface::JointHandle left_wheel_vel_handle(joint_state_interface.getHandle("left_wheel"), &joints[0].cmd);
-    hardware_interface::JointHandle right_wheel_vel_handle(joint_state_interface.getHandle("right_wheel"), &joints[1].cmd);
+    hardware_interface::JointHandle left_wheel_vel_handle(joint_state_interface.getHandle("left_wheel"), &joints[0].cmd.data);
+    hardware_interface::JointHandle right_wheel_vel_handle(joint_state_interface.getHandle("right_wheel"), &joints[1].cmd.data);
     velocity_joint_interface.registerHandle (left_wheel_vel_handle);
     velocity_joint_interface.registerHandle (right_wheel_vel_handle);
     registerInterface(&velocity_joint_interface);
@@ -114,10 +114,10 @@ void Hoverboard::read() {
     // Sometimes, it seems during EMI peaks, we're getting ridiculous values here
     // Don't know what to do with it, just ignoring for now
     if (fabs(sens_speed0) < 10000 && fabs(sens_speed1) < 10000) { 
-      joints[0].vel = DIRECTION_CORRECTION * (sens_speed0 / 1000.0) / wheel_radius;
-      joints[1].vel = DIRECTION_CORRECTION * (sens_speed1 / 1000.0) / wheel_radius;
-      joints[0].pos = DIRECTION_CORRECTION * (api->getPosition0_mm() / 1000.0) / wheel_radius;
-      joints[1].pos = DIRECTION_CORRECTION * (api->getPosition1_mm() / 1000.0) / wheel_radius;
+      joints[0].vel.data = DIRECTION_CORRECTION * (sens_speed0 / 1000.0) / wheel_radius;
+      joints[1].vel.data = DIRECTION_CORRECTION * (sens_speed1 / 1000.0) / wheel_radius;
+      joints[0].pos.data = DIRECTION_CORRECTION * (api->getPosition0_mm() / 1000.0) / wheel_radius;
+      joints[1].pos.data = DIRECTION_CORRECTION * (api->getPosition1_mm() / 1000.0) / wheel_radius;
 
       left_vel_pub.publish(joints[0].vel);
       right_vel_pub.publish(joints[1].vel);
@@ -139,8 +139,8 @@ void Hoverboard::write() {
     right_cmd_pub.publish(joints[1].cmd);
 
     // Convert rad/s to m/s
-    double left_speed = DIRECTION_CORRECTION * joints[0].cmd * wheel_radius;
-    double right_speed = DIRECTION_CORRECTION * joints[1].cmd * wheel_radius;
+    double left_speed = DIRECTION_CORRECTION * joints[0].cmd.data * wheel_radius;
+    double right_speed = DIRECTION_CORRECTION * joints[1].cmd.data * wheel_radius;
 
     // Cap according to dynamic_reconfigure
     const int max_power = have_config ? config.MaxPwr : 100;

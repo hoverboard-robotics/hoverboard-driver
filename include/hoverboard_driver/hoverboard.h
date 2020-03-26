@@ -25,10 +25,10 @@ private:
 
     // The units for wheels are radians (pos), radians per second (vel,cmd), and Netwton metres (eff)
     struct Joint {
-        double pos;
-        double vel;
-        double eff;
-        double cmd;
+        std_msgs::Float64 pos;
+        std_msgs::Float64 vel;
+        std_msgs::Float64 eff;
+        std_msgs::Float64 cmd;
     } joints[2];
 
     double wheel_radius;
