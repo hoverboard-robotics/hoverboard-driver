@@ -12,14 +12,18 @@ class HoverboardAPI;
 
 class Hoverboard : public hardware_interface::RobotHW {
 public:
-    Hoverboard();
+    static Hoverboard& getInstance();
     ~Hoverboard();
-
+    
     void read();
     void write();
     void tick();
 
-private:
+    void hallCallback();
+    void electricalCallback();
+ private:
+    Hoverboard();
+ 
     hardware_interface::JointStateInterface joint_state_interface;
     hardware_interface::VelocityJointInterface velocity_joint_interface;
 
@@ -41,6 +45,8 @@ private:
     ros::Publisher left_vel_pub, right_vel_pub;
     ros::Publisher left_eff_pub, right_eff_pub;
     ros::Publisher left_cmd_pub, right_cmd_pub;
+    ros::Publisher left_cur_pub, right_cur_pub;
+    ros::Publisher voltage_pub;
 
     // Supporting dynamic reconfigure for PID control
     dynamic_reconfigure::Server<hoverboard_driver::HoverboardConfig> *dsrv;

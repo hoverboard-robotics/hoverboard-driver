@@ -6,7 +6,7 @@
 int main(int argc, char **argv) {
     ros::init(argc, argv, "hoverboard_driver");
 
-    Hoverboard hoverboard;
+    Hoverboard& hoverboard = Hoverboard::getInstance();
     controller_manager::ControllerManager cm(&hoverboard);
 
     ros::AsyncSpinner spinner(1);
