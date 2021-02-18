@@ -7,6 +7,7 @@
 #include <std_msgs/Float64.h>
 #include <dynamic_reconfigure/server.h>
 #include "hoverboard_driver/HoverboardConfig.h"
+#include "hoverboard_driver/pid.h"
 
 class HoverboardAPI;
 
@@ -16,7 +17,7 @@ public:
     ~Hoverboard();
     
     void read();
-    void write();
+    void write(const ros::Time& time, const ros::Duration& period);
     void tick();
 
     void hallCallback();
@@ -26,6 +27,8 @@ public:
  
     hardware_interface::JointStateInterface joint_state_interface;
     hardware_interface::VelocityJointInterface velocity_joint_interface;
+
+    double max_velocity = 0.0;
 
     // The units for wheels are radians (pos), radians per second (vel,cmd), and Netwton metres (eff)
     struct Joint {
@@ -39,6 +42,8 @@ public:
     ros::Time last_read;
     HoverboardAPI *api;
 
+    PID pids[2];
+
     // For debug purposes only
     ros::NodeHandle nh;
     ros::Publisher left_pos_pub, right_pos_pub;
@@ -47,10 +52,4 @@ public:
     ros::Publisher left_cmd_pub, right_cmd_pub;
     ros::Publisher left_cur_pub, right_cur_pub;
     ros::Publisher voltage_pub;
-
-    // Supporting dynamic reconfigure for PID control
-    dynamic_reconfigure::Server<hoverboard_driver::HoverboardConfig> *dsrv;
-    void reconfigure_callback(hoverboard_driver::HoverboardConfig& config, uint32_t level);
-    hoverboard_driver::HoverboardConfig config;
-    bool have_config = false;
 };

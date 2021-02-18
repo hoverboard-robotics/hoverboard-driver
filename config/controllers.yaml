@@ -44,7 +44,7 @@ hoverboard_velocity_controller:
   angular:
     z:
       has_velocity_limits    : true # was true
-      max_velocity           : 1.57  # rad/s
+      max_velocity           : 3.14  # rad/s
       has_acceleration_limits: true # was true
       max_acceleration       : 3.14  # rad/s^2
       has_jerk_limits        : true

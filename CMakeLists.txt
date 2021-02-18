@@ -9,6 +9,8 @@ find_package(catkin REQUIRED COMPONENTS
   hardware_interface
   controller_manager
   dynamic_reconfigure
+  control_toolbox
+  rosparam_shortcuts
 )
 
 ## System dependencies are found with CMake's conventions
@@ -34,6 +36,7 @@ include_directories(
 add_executable(${PROJECT_NAME} 
   src/hoverboard.cpp 
   src/main.cpp
+  src/pid.cpp
   src/bipropellant/src/HoverboardAPI.cpp
   src/bipropellant/src/protocolFunctions.c
   src/bipropellant/src/hbprotocol/ascii_protocol.c

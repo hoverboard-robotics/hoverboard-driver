@@ -6,6 +6,7 @@
 #include <fcntl.h>
 #include <termios.h>
 #include <dynamic_reconfigure/server.h>
+#include <rosparam_shortcuts/rosparam_shortcuts.h>
 
 int port_fd = -1;
 
@@ -49,6 +50,12 @@ Hoverboard::Hoverboard() {
     velocity_joint_interface.registerHandle (right_wheel_vel_handle);
     registerInterface(&velocity_joint_interface);
 
+    const double max_vel = 1.0;
+    pids[0].init(nh, 0.8, 0.35, 0.5, 0.01, 3.5, -3.5, false, max_vel, -max_vel);
+    pids[0].setOutputLimits(-max_vel, max_vel);
+    pids[1].init(nh, 0.8, 0.35, 0.5, 0.01, 3.5, -3.5, false, max_vel, -max_vel);
+    pids[1].setOutputLimits(-max_vel, max_vel);
+
     // These publishers are only for debugging purposes
     left_pos_pub  = nh.advertise<std_msgs::Float64>("hoverboard/left_wheel/position", 3);
     right_pos_pub = nh.advertise<std_msgs::Float64>("hoverboard/right_wheel/position", 3);
@@ -62,8 +69,10 @@ Hoverboard::Hoverboard() {
     right_cur_pub = nh.advertise<std_msgs::Float64>("hoverboard/right_wheel/current", 3);
     voltage_pub   = nh.advertise<std_msgs::Float64>("hoverboard/battery_voltage", 3);
     
-    // FIXME! Read parameters from ROS
-    wheel_radius = WHEEL_RADIUS;
+    std::size_t error = 0;
+    error += !rosparam_shortcuts::get("hoverboard_driver", nh, "hoverboard_velocity_controller/wheel_radius", wheel_radius);
+    error += !rosparam_shortcuts::get("hoverboard_driver", nh, "hoverboard_velocity_controller/linear/x/max_velocity", max_velocity);
+    rosparam_shortcuts::shutdownIfError("hoverboard_driver", error);
 
     if ((port_fd = open(PORT, O_RDWR | O_NOCTTY | O_NDELAY)) < 0) {
         ROS_FATAL("Cannot open serial port to hoverboard");
@@ -84,16 +93,8 @@ Hoverboard::Hoverboard() {
     api = new HoverboardAPI(serialWrite);
     api->scheduleRead(HoverboardAPI::Codes::sensHall, -1, 50, PROTOCOL_SOM_NOACK);
     api->scheduleRead(HoverboardAPI::Codes::sensElectrical, -1, 50, PROTOCOL_SOM_NOACK);
-
-    // Support dynamic reconfigure
-    dsrv = new dynamic_reconfigure::Server<hoverboard_driver::HoverboardConfig>(ros::NodeHandle("~"));
-    dynamic_reconfigure::Server<hoverboard_driver::HoverboardConfig>::CallbackType cb =
-      boost::bind(&Hoverboard::reconfigure_callback, this, _1, _2);
-    dsrv->setCallback(cb);
-
     api->updateParamHandler(HoverboardAPI::Codes::sensHall, readCallback);
     api->updateParamHandler(HoverboardAPI::Codes::sensElectrical, readCallback);
-
     api->disablePoweroffTimer();
 }
 
@@ -101,14 +102,6 @@ Hoverboard::~Hoverboard() {
     if (port_fd != -1) 
         close(port_fd);
     delete api;
-}
-
-void Hoverboard::reconfigure_callback(hoverboard_driver::HoverboardConfig& _config, uint32_t level) {
-  config = _config;
-  have_config = true;
-
-  printf("Reconfigured PID to [%d, %d, %d, %d]\n", config.Kp, config.Ki, config.Kd, config.Incr);
-  api->sendPIDControl(config.Kp, config.Ki, config.Kd, config.Incr);
 }
 
 void Hoverboard::read() {
@@ -145,7 +138,6 @@ void Hoverboard::hallCallback() {
     right_vel_pub.publish(joints[1].vel);
     left_pos_pub.publish(joints[0].pos);
     right_pos_pub.publish(joints[1].pos);
-
     // printf("[%.3f, %.3f] -> [%.3f, %.3f]\n", sens_speed0, sens_speed1, joints[0].vel.data, joints[1].vel.data);
 }
 
@@ -162,7 +154,7 @@ void Hoverboard::electricalCallback() {
     voltage_pub.publish(f);
 }
 
-void Hoverboard::write() {
+void Hoverboard::write(const ros::Time& time, const ros::Duration& period) {
     if (port_fd == -1) {
         ROS_ERROR("Attempt to write on closed serial");
         return;
@@ -171,19 +163,20 @@ void Hoverboard::write() {
     left_cmd_pub.publish(joints[0].cmd);
     right_cmd_pub.publish(joints[1].cmd);
 
-#ifdef CONTROL_PWM
-    int left_pwm  = joints[0].cmd.data * 30;
-    int right_pwm = joints[1].cmd.data * 30;
-    api->sendDifferentialPWM (left_pwm, right_pwm);
-#else 
-    // Cap according to dynamic_reconfigure
-    // Convert rad/s to m/s
-    double left_speed = DIRECTION_CORRECTION * joints[0].cmd.data * wheel_radius;
-    double right_speed = DIRECTION_CORRECTION * joints[1].cmd.data * wheel_radius;
-    const int max_power = have_config ? config.MaxPwr : 100;    
-    const int min_speed = have_config ? config.MinSpd : 40;
-    api->sendSpeedData (left_speed, right_speed, max_power, min_speed);
-#endif
+    double pid_outputs[2];
+    double motor_cmds[2] ;
+    pid_outputs[0] = pids[0](joints[0].vel.data, joints[0].cmd.data, period);
+    pid_outputs[1] = pids[1](joints[1].vel.data, joints[1].cmd.data, period);
+
+    // TODO - figure out the right PWM setting
+    motor_cmds[0] = pid_outputs[0] / max_velocity * 100.0;
+    motor_cmds[1] = pid_outputs[1] / max_velocity * 100.0;
+    int left_pwm  = motor_cmds[0];
+    int right_pwm = motor_cmds[1];
+
+    // int left_pwm  = joints[0].cmd.data * 30;
+    // int right_pwm = joints[1].cmd.data * 30;
+    // api->sendDifferentialPWM (left_pwm, right_pwm);
 }
 
 void Hoverboard::tick() {

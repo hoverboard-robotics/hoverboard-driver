@@ -21,7 +21,7 @@ int main(int argc, char **argv) {
 
         hoverboard.read();
         cm.update(time, period);
-        hoverboard.write();
+        hoverboard.write(time, period);
         hoverboard.tick();
 
         rate.sleep();
