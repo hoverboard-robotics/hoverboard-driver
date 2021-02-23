@@ -41,6 +41,7 @@ public:
     double wheel_radius;
     ros::Time last_read;
     HoverboardAPI *api;
+    double last_left_speed = 0.0, last_right_speed = 0.0;
 
     PID pids[2];
 

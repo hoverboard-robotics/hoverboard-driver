@@ -50,12 +50,6 @@ Hoverboard::Hoverboard() {
     velocity_joint_interface.registerHandle (right_wheel_vel_handle);
     registerInterface(&velocity_joint_interface);
 
-    const double max_vel = 1.0;
-    pids[0].init(nh, 0.8, 0.35, 0.5, 0.01, 3.5, -3.5, false, max_vel, -max_vel);
-    pids[0].setOutputLimits(-max_vel, max_vel);
-    pids[1].init(nh, 0.8, 0.35, 0.5, 0.01, 3.5, -3.5, false, max_vel, -max_vel);
-    pids[1].setOutputLimits(-max_vel, max_vel);
-
     // These publishers are only for debugging purposes
     left_pos_pub  = nh.advertise<std_msgs::Float64>("hoverboard/left_wheel/position", 3);
     right_pos_pub = nh.advertise<std_msgs::Float64>("hoverboard/right_wheel/position", 3);
@@ -73,6 +67,19 @@ Hoverboard::Hoverboard() {
     error += !rosparam_shortcuts::get("hoverboard_driver", nh, "hoverboard_velocity_controller/wheel_radius", wheel_radius);
     error += !rosparam_shortcuts::get("hoverboard_driver", nh, "hoverboard_velocity_controller/linear/x/max_velocity", max_velocity);
     rosparam_shortcuts::shutdownIfError("hoverboard_driver", error);
+
+    // Convert m/s to rad/s
+    max_velocity /= wheel_radius;
+    printf("Max velocity in rad/s: %.2f", max_velocity);
+
+    ros::NodeHandle nh_left(nh, "pid/left");
+    ros::NodeHandle nh_right(nh, "pid/right");
+    
+    // Init PID controller
+    pids[0].init(nh_left, 1.0, 0.0, 0.0, 0.01, 1.5, -1.5, true, max_velocity, -max_velocity);
+    pids[0].setOutputLimits(-max_velocity, max_velocity);
+    pids[1].init(nh_right, 1.0, 0.0, 0.0, 0.01, 1.5, -1.5, true, max_velocity, -max_velocity);
+    pids[1].setOutputLimits(-max_velocity, max_velocity);
 
     if ((port_fd = open(PORT, O_RDWR | O_NOCTTY | O_NDELAY)) < 0) {
         ROS_FATAL("Cannot open serial port to hoverboard");
@@ -130,15 +137,23 @@ void Hoverboard::hallCallback() {
     double sens_speed0 = api->getSpeed0_mms();
     double sens_speed1 = api->getSpeed1_mms();
 
-    joints[0].vel.data = DIRECTION_CORRECTION * (sens_speed0 / 1000.0);
-    joints[1].vel.data = DIRECTION_CORRECTION * (sens_speed1 / 1000.0);
+    if (fabs(sens_speed0-last_left_speed) > 1000.0 || fabs(sens_speed1-last_right_speed) > 1000.0) {
+	ROS_ERROR("Absurd values: %.2f %.2f", sens_speed0, sens_speed1);
+	return;
+    }
+
+    joints[0].vel.data = DIRECTION_CORRECTION * (sens_speed0 / 1000.0) / wheel_radius;
+    joints[1].vel.data = DIRECTION_CORRECTION * (sens_speed1 / 1000.0) / wheel_radius;
     joints[0].pos.data = DIRECTION_CORRECTION * (api->getPosition0_mm() / 1000.0);
     joints[1].pos.data = DIRECTION_CORRECTION * (api->getPosition1_mm() / 1000.0);
     left_vel_pub.publish(joints[0].vel);
     right_vel_pub.publish(joints[1].vel);
     left_pos_pub.publish(joints[0].pos);
     right_pos_pub.publish(joints[1].pos);
-    // printf("[%.3f, %.3f] -> [%.3f, %.3f]\n", sens_speed0, sens_speed1, joints[0].vel.data, joints[1].vel.data);
+    
+//    printf("[%.3f, %.3f] -> [%.3f, %.3f]\n", sens_speed0, sens_speed1, joints[0].vel.data, joints[1].vel.data);
+    last_left_speed = sens_speed0;
+    last_right_speed = sens_speed1;
 }
 
 void Hoverboard::electricalCallback() {
@@ -159,24 +174,35 @@ void Hoverboard::write(const ros::Time& time, const ros::Duration& period) {
         ROS_ERROR("Attempt to write on closed serial");
         return;
     }
-    // Inform interested parties about the commands we've got
+
+    // joints[i].cmd -- speed for wheel rotation in rad/s
     left_cmd_pub.publish(joints[0].cmd);
     right_cmd_pub.publish(joints[1].cmd);
 
     double pid_outputs[2];
     double motor_cmds[2] ;
+
+    // use PID controller to determine the right _speed_ in rad/s,
+    // given commanded speed (.cmd) and last known actual speed (.vel)
+    
     pid_outputs[0] = pids[0](joints[0].vel.data, joints[0].cmd.data, period);
     pid_outputs[1] = pids[1](joints[1].vel.data, joints[1].cmd.data, period);
 
-    // TODO - figure out the right PWM setting
-    motor_cmds[0] = pid_outputs[0] / max_velocity * 100.0;
-    motor_cmds[1] = pid_outputs[1] / max_velocity * 100.0;
-    int left_pwm  = motor_cmds[0];
-    int right_pwm = motor_cmds[1];
+    // Get motor CMD as a ratio of full max_velocity in rad/s, range 0..1 
+    motor_cmds[0] = (pid_outputs[0] / max_velocity);
+    motor_cmds[1] = (pid_outputs[1] / max_velocity);
 
-    // int left_pwm  = joints[0].cmd.data * 30;
-    // int right_pwm = joints[1].cmd.data * 30;
-    // api->sendDifferentialPWM (left_pwm, right_pwm);
+    // Use motor cmd range with max_pwm
+    int max_pwm   = 200; // Empirically chosen value. Control the rest with PID.
+    int left_pwm  = motor_cmds[0] * max_pwm;
+    int right_pwm = motor_cmds[1] * max_pwm;
+
+    // printf("PWM CMD [%.2f, %.2f] -> [%.2f, %.2f] -> [%d, %d]\n",
+    // 	   joints[0].cmd.data, joints[1].cmd.data,
+    // 	   pid_outputs[0], pid_outputs[1],
+    // 	   left_pwm, right_pwm);
+
+    api->sendDifferentialPWM (left_pwm, right_pwm);
 }
 
 void Hoverboard::tick() {

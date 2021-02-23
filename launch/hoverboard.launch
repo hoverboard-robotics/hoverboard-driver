@@ -1,19 +1,5 @@
 <launch>
 
-  <node name="controller" pkg="pid" type="controller" ns="/hoverboard/left_wheel" output="screen" >
-    <rosparam file="$(find hoverboard_driver)/config/pid_controller_params.yaml" command="load"/>
-    <param name="topic_from_controller" value="/hoverboard/left_wheel/cmd/closed_loop"/>
-    <param name="topic_from_plant" value="/hoverboard/left_wheel/velocity"/>
-    <param name="setpoint_topic" value="/hoverboard/left_wheel/cmd"/>
-  </node>
-
-  <node name="controller" pkg="pid" type="controller" ns="/hoverboard/right_wheel" output="screen" >
-    <rosparam file="$(find hoverboard_driver)/config/pid_controller_params.yaml" command="load"/>
-    <param name="topic_from_controller" value="/hoverboard/right_wheel/cmd/closed_loop"/>
-    <param name="topic_from_plant" value="/hoverboard/right_wheel/velocity"/>
-    <param name="setpoint_topic" value="/hoverboard/right_wheel/cmd"/>
-  </node>
-
   <rosparam file="$(find hoverboard_driver)/config/hardware.yaml" command="load"/>
   <rosparam file="$(find hoverboard_driver)/config/controllers.yaml" command="load"/>
   <node name="hoverboard_driver" pkg="hoverboard_driver" type="hoverboard_driver" output="screen"/>

@@ -20,9 +20,11 @@ int main(int argc, char **argv) {
         const ros::Duration period = time - prev_time;
 
         hoverboard.read();
+	hoverboard.tick();
+	
         cm.update(time, period);
+	
         hoverboard.write(time, period);
-        hoverboard.tick();
 
         rate.sleep();
     }
