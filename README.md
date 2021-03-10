@@ -1,5 +1,5 @@
 # hoverboard-driver
-ROS hardware driver for UART-controlled hoverboard. Can be used with [diff_drive_controller](http://wiki.ros.org/diff_drive_controller). Hoverboard is using [firmware by p-h-a-i-l](https://github.com/bipropellant/bipropellant-hoverboard-firmware)
+ROS hardware driver for UART-controlled hoverboard. Can be used with [diff_drive_controller](http://wiki.ros.org/diff_drive_controller). Hoverboard is using [firmware by p-h-a-i-l and @btsimonh](https://github.com/bipropellant/bipropellant-hoverboard-firmware)
 
 Clone with submodules:
 ```
