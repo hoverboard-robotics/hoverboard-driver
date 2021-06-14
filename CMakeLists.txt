@@ -42,6 +42,7 @@ add_executable(${PROJECT_NAME}
   src/bipropellant/src/hbprotocol/ascii_protocol.c
   src/bipropellant/src/hbprotocol/protocol.c
   src/bipropellant/src/hbprotocol/machine_protocol.c
+  src/bipropellant/src/hbprotocol/cobsr.c  
 )
 target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${Boost_LIBRARIES})
 

@@ -24,7 +24,9 @@ public:
     void electricalCallback();
  private:
     Hoverboard();
- 
+    Hoverboard(Hoverboard const&);
+    void operator=(Hoverboard const&);
+
     hardware_interface::JointStateInterface joint_state_interface;
     hardware_interface::VelocityJointInterface velocity_joint_interface;
 

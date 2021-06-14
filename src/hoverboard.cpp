@@ -1,6 +1,7 @@
 #include "config.h"
 #include "hoverboard.h"
 #include "HoverboardAPI.h"
+#include "protocolFunctions.h" // temp
 
 #include <unistd.h>
 #include <fcntl.h>
@@ -9,19 +10,8 @@
 #include <rosparam_shortcuts/rosparam_shortcuts.h>
 
 int port_fd = -1;
-
 int serialWrite(unsigned char *data, int len) {
     return (int)write(port_fd, data, len);
-}
-
-void readCallback(PROTOCOL_STAT* s, PARAMSTAT* param, uint8_t fn_type, unsigned char* content, int len) {
-  if (fn_type == FN_TYPE_POST_READRESPONSE) {
-    if (param->code == HoverboardAPI::Codes::sensHall) {
-      Hoverboard::getInstance().hallCallback();
-    } else if (param->code == HoverboardAPI::Codes::sensElectrical) {
-      Hoverboard::getInstance().electricalCallback();
-    }
-  }
 }
 
 Hoverboard& Hoverboard::getInstance() {
@@ -70,7 +60,6 @@ Hoverboard::Hoverboard() {
 
     // Convert m/s to rad/s
     max_velocity /= wheel_radius;
-    printf("Max velocity in rad/s: %.2f", max_velocity);
 
     ros::NodeHandle nh_left(nh, "pid/left");
     ros::NodeHandle nh_right(nh, "pid/right");
@@ -98,11 +87,6 @@ Hoverboard::Hoverboard() {
     tcsetattr(port_fd, TCSANOW, &options);
 
     api = new HoverboardAPI(serialWrite);
-    api->scheduleRead(HoverboardAPI::Codes::sensHall, -1, 50, PROTOCOL_SOM_NOACK);
-    api->scheduleRead(HoverboardAPI::Codes::sensElectrical, -1, 50, PROTOCOL_SOM_NOACK);
-    api->updateParamHandler(HoverboardAPI::Codes::sensHall, readCallback);
-    api->updateParamHandler(HoverboardAPI::Codes::sensElectrical, readCallback);
-    api->disablePoweroffTimer();
 }
 
 Hoverboard::~Hoverboard() {
@@ -112,12 +96,14 @@ Hoverboard::~Hoverboard() {
 }
 
 void Hoverboard::read() {
+    int i = 0, j = 0;
+    
     if (port_fd != -1) {
         const int max_length = 1024; // HoverboardAPI limit
         unsigned char c;
-        int i = 0, r = 0;
+        int r = 0;
 
-        while ((r = ::read(port_fd, &c, 1)) > 0 && i++ < 1024)
+        while ((r = ::read(port_fd, &c, 1)) > 0 && i++ < max_length)
             api->protocolPush(c);
 
 	if (i > 0)
@@ -127,12 +113,43 @@ void Hoverboard::read() {
 	  ROS_ERROR("Reading from serial %s failed: %d", PORT, r);
     }
 
+    // FIXME -- scheduled reads are broken in the latest version of hoverboard protocol
+    // therefore triggering callbacks manually
+    Hoverboard::getInstance().hallCallback();
+    Hoverboard::getInstance().electricalCallback();
+	    
     if ((ros::Time::now() - last_read).toSec() > 1) {
       ROS_FATAL("Timeout reading from serial %s failed", PORT);
     }
 }
 
 void Hoverboard::hallCallback() {
+
+    // int32_t HallPosn; // 90 per revolution
+    // int32_t HallSpeed; // speed part calibrated to speed demand value
+
+    // float HallPosnMultiplier; // m per hall segment
+
+    // int32_t HallPosn_lastread; // posn offset set via protocol in raw value
+    // int32_t HallPosn_mm; // posn in mm
+    // int32_t HallPosn_mm_lastread; // posn offset set via protocol in mm
+    // int32_t HallSpeed_mm_per_s; // speed in m/s
+
+    // uint32_t HallTimeDiff;
+    // uint32_t HallSkipped;
+
+    for (int i = 0; i < 2; i++)
+	printf ("P: %d S: %d LR: %d MM: %d MMLR: %d MMPS: %d TD: %d SKIP: %d\n",
+	    HallData[i].HallPosn,
+	    HallData[i].HallSpeed,
+	    HallData[i].HallPosn_lastread,
+	    HallData[i].HallPosn_mm,
+	    HallData[i].HallPosn_mm_lastread,
+	    HallData[i].HallSpeed_mm_per_s,
+	    HallData[i].HallTimeDiff,
+	    HallData[i].HallSkipped);	    
+    printf("\n-\n");
+    
     // Convert m/s to rad/s
     double sens_speed0 = api->getSpeed0_mms();
     double sens_speed1 = api->getSpeed1_mms();
@@ -197,12 +214,15 @@ void Hoverboard::write(const ros::Time& time, const ros::Duration& period) {
     int left_pwm  = motor_cmds[0] * max_pwm;
     int right_pwm = motor_cmds[1] * max_pwm;
 
-    // printf("PWM CMD [%.2f, %.2f] -> [%.2f, %.2f] -> [%d, %d]\n",
-    // 	   joints[0].cmd.data, joints[1].cmd.data,
-    // 	   pid_outputs[0], pid_outputs[1],
-    // 	   left_pwm, right_pwm);
+//    printf("PWM CMD [%.2f, %.2f] -> [%.2f, %.2f] -> [%d, %d]\n",
+//    	   joints[0].cmd.data, joints[1].cmd.data,
+//    	   pid_outputs[0], pid_outputs[1],
+//     	   left_pwm, right_pwm);
 
     api->sendDifferentialPWM (left_pwm, right_pwm);
+    api->requestRead(HoverboardAPI::Codes::sensHall);
+//    api->requestRead(HoverboardAPI::Codes::sensElectrical);    
+//    api->sendSpeedData(pid_outputs[0]*wheel_radius, pid_outputs[1]*wheel_radius, 600, 40);
 }
 
 void Hoverboard::tick() {
