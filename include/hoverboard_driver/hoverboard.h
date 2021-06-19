@@ -7,22 +7,21 @@
 #include <std_msgs/Float64.h>
 #include <dynamic_reconfigure/server.h>
 #include "hoverboard_driver/HoverboardConfig.h"
+#include "hoverboard_driver/pid.h"
+#include "protocol.h"
 
 class HoverboardAPI;
 
 class Hoverboard : public hardware_interface::RobotHW {
 public:
-    static Hoverboard& getInstance();
+    Hoverboard();
     ~Hoverboard();
     
     void read();
-    void write();
+    void write(const ros::Time& time, const ros::Duration& period);
     void tick();
-
-    void hallCallback();
-    void electricalCallback();
  private:
-    Hoverboard();
+    void protocol_recv (char c);
  
     hardware_interface::JointStateInterface joint_state_interface;
     hardware_interface::VelocityJointInterface velocity_joint_interface;
@@ -35,22 +34,24 @@ public:
         std_msgs::Float64 cmd;
     } joints[2];
 
-    double wheel_radius;
-    ros::Time last_read;
-    HoverboardAPI *api;
-
-    // For debug purposes only
+    // Publishers
     ros::NodeHandle nh;
-    ros::Publisher left_pos_pub, right_pos_pub;
-    ros::Publisher left_vel_pub, right_vel_pub;
-    ros::Publisher left_eff_pub, right_eff_pub;
-    ros::Publisher left_cmd_pub, right_cmd_pub;
-    ros::Publisher left_cur_pub, right_cur_pub;
+    ros::Publisher vel_pub[2];
+    ros::Publisher cmd_pub[2];
     ros::Publisher voltage_pub;
+    ros::Publisher temp_pub;
 
-    // Supporting dynamic reconfigure for PID control
-    dynamic_reconfigure::Server<hoverboard_driver::HoverboardConfig> *dsrv;
-    void reconfigure_callback(hoverboard_driver::HoverboardConfig& config, uint32_t level);
-    hoverboard_driver::HoverboardConfig config;
-    bool have_config = false;
+    double wheel_radius;
+    double max_velocity = 0.0;
+    ros::Time last_read;
+
+    // Hoverboard protocol
+    int port_fd;
+    int msg_len = 0;
+    char prev_byte = 0;
+    uint16_t start_frame = 0;
+    char* p;
+    SerialFeedback msg, prev_msg;
+
+    PID pids[2];
 };

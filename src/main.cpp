@@ -6,14 +6,14 @@
 int main(int argc, char **argv) {
     ros::init(argc, argv, "hoverboard_driver");
 
-    Hoverboard& hoverboard = Hoverboard::getInstance();
+    Hoverboard hoverboard;
     controller_manager::ControllerManager cm(&hoverboard);
 
     ros::AsyncSpinner spinner(1);
     spinner.start();
 
     ros::Time prev_time = ros::Time::now();
-    ros::Rate rate(50.0);
+    ros::Rate rate(100.0);
 
     while (ros::ok()) {
         const ros::Time time = ros::Time::now();
@@ -21,8 +21,7 @@ int main(int argc, char **argv) {
 
         hoverboard.read();
         cm.update(time, period);
-        hoverboard.write();
-        hoverboard.tick();
+        hoverboard.write(time, period);
 
         rate.sleep();
     }
