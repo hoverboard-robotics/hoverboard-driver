@@ -9,13 +9,13 @@
 
 Hoverboard::Hoverboard() {
     hardware_interface::JointStateHandle left_wheel_state_handle("left_wheel",
-                                &joints[0].pos.data,
-                                &joints[0].vel.data,
-                                &joints[0].eff.data);
+								 &joints[0].pos.data,
+								 &joints[0].vel.data,
+								 &joints[0].eff.data);
     hardware_interface::JointStateHandle right_wheel_state_handle("right_wheel",
-                                &joints[1].pos.data,
-                                &joints[1].vel.data,
-                                &joints[1].eff.data);
+								  &joints[1].pos.data,
+								  &joints[1].vel.data,
+								  &joints[1].eff.data);
     joint_state_interface.registerHandle (left_wheel_state_handle);
     joint_state_interface.registerHandle (right_wheel_state_handle);
     registerInterface(&joint_state_interface);
@@ -33,6 +33,8 @@ Hoverboard::Hoverboard() {
     // These publishers are only for debugging purposes
     vel_pub[0]    = nh.advertise<std_msgs::Float64>("hoverboard/left_wheel/velocity", 3);
     vel_pub[1]    = nh.advertise<std_msgs::Float64>("hoverboard/right_wheel/velocity", 3);
+    pos_pub[0]    = nh.advertise<std_msgs::Float64>("hoverboard/left_wheel/position", 3);
+    pos_pub[1]    = nh.advertise<std_msgs::Float64>("hoverboard/right_wheel/position", 3);    
     cmd_pub[0]    = nh.advertise<std_msgs::Float64>("hoverboard/left_wheel/cmd", 3);
     cmd_pub[1]    = nh.advertise<std_msgs::Float64>("hoverboard/right_wheel/cmd", 3);
     voltage_pub   = nh.advertise<std_msgs::Float64>("hoverboard/battery_voltage", 3);
@@ -45,6 +47,11 @@ Hoverboard::Hoverboard() {
 
     // Convert m/s to rad/s
     max_velocity /= wheel_radius;
+
+    low_wrap = ENCODER_LOW_WRAP_FACTOR*(ENCODER_MAX - ENCODER_MIN) + ENCODER_MIN;
+    high_wrap = ENCODER_HIGH_WRAP_FACTOR*(ENCODER_MAX - ENCODER_MIN) + ENCODER_MIN;
+    last_wheelcountR = last_wheelcountL = 0;
+    multR = multL = 0;
 
     ros::NodeHandle nh_left(nh, "pid/left");
     ros::NodeHandle nh_right(nh, "pid/right");
@@ -85,7 +92,7 @@ void Hoverboard::read() {
             protocol_recv(c);
 
         if (i > 0)
-        last_read = ros::Time::now();
+	        last_read = ros::Time::now();
 
         if (r < 0 && errno != EAGAIN)
             ROS_ERROR("Reading from serial %s failed: %d", PORT, r);
@@ -118,6 +125,8 @@ void Hoverboard::protocol_recv (char byte) {
             msg.cmd2 ^
             msg.speedR_meas ^
             msg.speedL_meas ^
+	        msg.wheelR_cnt ^
+	        msg.wheelL_cnt ^
             msg.batVoltage ^
             msg.boardTemp ^
             msg.cmdLed);
@@ -134,9 +143,11 @@ void Hoverboard::protocol_recv (char byte) {
             // Convert RPM to RAD/S
             joints[0].vel.data = DIRECTION_CORRECTION * (abs(msg.speedL_meas) * 0.10472);
             joints[1].vel.data = DIRECTION_CORRECTION * (abs(msg.speedR_meas) * 0.10472);
-
             vel_pub[0].publish(joints[0].vel);
             vel_pub[1].publish(joints[1].vel);
+
+            // Process encoder values and update odometry
+            on_encoder_update (msg.wheelR_cnt, msg.wheelL_cnt);
         } else {
             ROS_WARN("Hoverboard checksum mismatch: %d vs %d", msg.checksum, checksum);
         }
@@ -180,3 +191,30 @@ void Hoverboard::write(const ros::Time& time, const ros::Duration& period) {
     }
 }
 
+void Hoverboard::on_encoder_update (int16_t right, int16_t left) {
+    double posL = 0.0, posR = 0.0;
+
+    // Calculate wheel position in ticks, factoring in encoder wraps
+    if (right < low_wrap && last_wheelcountR > high_wrap)
+        multR++;
+    else if (right > high_wrap && last_wheelcountR < low_wrap)
+        multR--;
+    posR = right + multR*(ENCODER_MAX-ENCODER_MIN);
+    last_wheelcountR = right;
+
+    if (left < low_wrap && last_wheelcountL > high_wrap)
+        multL++;
+    else if (left > high_wrap && last_wheelcountL < low_wrap)
+        multL--;
+    posL = left + multL*(ENCODER_MAX-ENCODER_MIN);
+    last_wheelcountL = left;
+
+    // Convert position in ticks to position in radians
+    joints[0].pos.data = 2.0*M_PI * posL/(double)TICKS_PER_ROTATION;
+    joints[1].pos.data = 2.0*M_PI * posR/(double)TICKS_PER_ROTATION;
+    pos_pub[0].publish(joints[0].pos);
+    pos_pub[1].publish(joints[1].pos);
+//    printf("POS: %d %d %.2f %.2f\n", right, left,
+//     	   joints[1].pos.data,
+//     	   joints[0].pos.data);
+}

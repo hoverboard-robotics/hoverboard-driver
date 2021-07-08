@@ -20,6 +20,8 @@ typedef struct {
    int16_t  cmd2;
    int16_t  speedR_meas;
    int16_t  speedL_meas;
+   int16_t  wheelR_cnt;
+   int16_t  wheelL_cnt; 
    int16_t  batVoltage;
    int16_t  boardTemp;
    uint16_t cmdLed;
