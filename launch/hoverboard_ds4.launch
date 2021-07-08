@@ -1,0 +1,17 @@
+<launch>
+    <rosparam file="$(find hoverboard_driver)/config/hardware.yaml" command="load"/>
+    <rosparam file="$(find hoverboard_driver)/config/controllers.yaml" command="load"/>
+
+      <!-- PS4 joypad -->
+  <remap from="/cmd_vel" to="/hoverboard_velocity_controller/cmd_vel"/>    
+  <include file="$(find ds4_driver)/launch/ds4_twist.launch">
+    <arg name="dof" value="2"/>
+    <!--<arg name="topic" value="joy_vel"/> -->
+    
+  </include>
+
+
+    <node name="hoverboard_driver" pkg="hoverboard_driver" type="hoverboard_driver" output="screen"/>
+    <node name="controller_spawner" pkg="controller_manager" type="spawner" respawn="false" output="screen" ns="/"
+        args="hoverboard_joint_publisher hoverboard_velocity_controller" />
+</launch>
