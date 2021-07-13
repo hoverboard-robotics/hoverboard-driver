@@ -18,6 +18,7 @@ int main(int argc, char **argv) {
     while (ros::ok()) {
         const ros::Time time = ros::Time::now();
         const ros::Duration period = time - prev_time;
+        prev_time = time;
 
         hoverboard.read();
         cm.update(time, period);
