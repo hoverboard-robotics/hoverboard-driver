@@ -104,7 +104,7 @@ void Hoverboard::read() {
 }
 
 void Hoverboard::protocol_recv (char byte) {
-    start_frame = ((uint16_t)(byte) << 8) | prev_byte;
+    start_frame = ((uint16_t)(byte) << 8) | (uint8_t)prev_byte;
 
     // Read the start frame
     if (start_frame == START_FRAME) {
