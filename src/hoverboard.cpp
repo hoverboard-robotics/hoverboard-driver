@@ -39,6 +39,7 @@ Hoverboard::Hoverboard() {
     cmd_pub[1]    = nh.advertise<std_msgs::Float64>("hoverboard/right_wheel/cmd", 3);
     voltage_pub   = nh.advertise<std_msgs::Float64>("hoverboard/battery_voltage", 3);
     temp_pub      = nh.advertise<std_msgs::Float64>("hoverboard/temperature", 3);
+    connected_pub = nh.advertise<std_msgs::Bool>("hoverboard/connected", 3);
 
     std::size_t error = 0;
     error += !rosparam_shortcuts::get("hoverboard_driver", nh, "hoverboard_velocity_controller/wheel_radius", wheel_radius);
@@ -100,7 +101,17 @@ void Hoverboard::read() {
 
     if ((ros::Time::now() - last_read).toSec() > 1) {
         ROS_FATAL("Timeout reading from serial %s failed", PORT);
-    }
+        
+        //publish false when not receiving serial data
+        std_msgs::Bool b;
+        b.data = false;
+        connected_pub.publish(b);
+    } else {
+		//we must be connected - publish true
+        std_msgs::Bool b;
+        b.data = true;
+        connected_pub.publish(b);
+	}
 }
 
 void Hoverboard::protocol_recv (char byte) {
