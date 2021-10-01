@@ -230,8 +230,8 @@ void Hoverboard::on_encoder_update (int16_t right, int16_t left) {
     //reset the last read ticks to the startup values
     if((ros::Time::now() - last_read).toSec() > 0.2
 		&& abs(posL) < 5 && abs(posR) < 5){
-		lastPosL = posL;
-		lastPosR = posR;
+            lastPosL = posL;
+            lastPosR = posR;
 	}
     double posLDiff = 0;
     double posRDiff = 0;
@@ -240,13 +240,13 @@ void Hoverboard::on_encoder_update (int16_t right, int16_t left) {
 	if(nodeStartFlag){
 		nodeStartFlag = false;
 	}else{
-		posLDiff = posL - lastPosL;
-		posRDiff = posR - lastPosR;
+            posLDiff = posL - lastPosL;
+            posRDiff = posR - lastPosR;
 	}
 
     lastPubPosL += posLDiff;
     lastPubPosR += posRDiff;
-	lastPosL = posL;
+    lastPosL = posL;
     lastPosR = posR;
     
     // Convert position in accumulated ticks to position in radians
