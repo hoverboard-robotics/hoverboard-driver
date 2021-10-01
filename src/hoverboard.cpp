@@ -233,9 +233,17 @@ void Hoverboard::on_encoder_update (int16_t right, int16_t left) {
 		lastPosL = posL;
 		lastPosR = posR;
 	}
-	
-    double posLDiff = posL - lastPosL;
-    double posRDiff = posR - lastPosR;    
+    double posLDiff = 0;
+    double posRDiff = 0;
+
+    //if node is just starting keep odom at zeros
+	if(nodeStartFlag){
+		nodeStartFlag = false;
+	}else{
+		posLDiff = posL - lastPosL;
+		posRDiff = posR - lastPosR;
+	}
+
     lastPubPosL += posLDiff;
     lastPubPosR += posRDiff;
 	lastPosL = posL;
