@@ -224,6 +224,7 @@ void Hoverboard::on_encoder_update (int16_t right, int16_t left) {
     // This section accumulates ticks even if board shuts down and is restarted   
     static double lastPosL = 0.0, lastPosR = 0.0;
     static double lastPubPosL = 0.0, lastPubPosR = 0.0;
+    static bool nodeStartFlag = true;
     
     //IF there has been a pause in receiving data AND the new number of ticks is close to zero, indicates a board restard
     //(the board seems to often report 1-3 ticks on startup instead of zero)
