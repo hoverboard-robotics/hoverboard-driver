@@ -220,9 +220,40 @@ void Hoverboard::on_encoder_update (int16_t right, int16_t left) {
     posL = left + multL*(ENCODER_MAX-ENCODER_MIN);
     last_wheelcountL = left;
 
-    // Convert position in ticks to position in radians
-    joints[0].pos.data = 2.0*M_PI * posL/(double)TICKS_PER_ROTATION;
-    joints[1].pos.data = 2.0*M_PI * posR/(double)TICKS_PER_ROTATION;
+    // When the board shuts down and restarts, wheel ticks are reset to zero so the robot can be suddently lost
+    // This section accumulates ticks even if board shuts down and is restarted   
+    static double lastPosL = 0.0, lastPosR = 0.0;
+    static double lastPubPosL = 0.0, lastPubPosR = 0.0;
+    static bool nodeStartFlag = true;
+    
+    //IF there has been a pause in receiving data AND the new number of ticks is close to zero, indicates a board restard
+    //(the board seems to often report 1-3 ticks on startup instead of zero)
+    //reset the last read ticks to the startup values
+    if((ros::Time::now() - last_read).toSec() > 0.2
+		&& abs(posL) < 5 && abs(posR) < 5){
+            lastPosL = posL;
+            lastPosR = posR;
+	}
+    double posLDiff = 0;
+    double posRDiff = 0;
+
+    //if node is just starting keep odom at zeros
+	if(nodeStartFlag){
+		nodeStartFlag = false;
+	}else{
+            posLDiff = posL - lastPosL;
+            posRDiff = posR - lastPosR;
+	}
+
+    lastPubPosL += posLDiff;
+    lastPubPosR += posRDiff;
+    lastPosL = posL;
+    lastPosR = posR;
+    
+    // Convert position in accumulated ticks to position in radians
+    joints[0].pos.data = 2.0*M_PI * lastPubPosL/(double)TICKS_PER_ROTATION;
+    joints[1].pos.data = 2.0*M_PI * lastPubPosR/(double)TICKS_PER_ROTATION;
+
     pos_pub[0].publish(joints[0].pos);
     pos_pub[1].publish(joints[1].pos);
 //    printf("POS: %d %d %.2f %.2f\n", right, left,
