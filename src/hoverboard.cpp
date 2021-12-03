@@ -39,6 +39,7 @@ Hoverboard::Hoverboard() {
     cmd_pub[1]    = nh.advertise<std_msgs::Float64>("hoverboard/right_wheel/cmd", 3);
     voltage_pub   = nh.advertise<std_msgs::Float64>("hoverboard/battery_voltage", 3);
     temp_pub      = nh.advertise<std_msgs::Float64>("hoverboard/temperature", 3);
+    connected_pub = nh.advertise<std_msgs::Bool>("hoverboard/connected", 3);
 
     std::size_t error = 0;
     error += !rosparam_shortcuts::get("hoverboard_driver", nh, "hoverboard_velocity_controller/wheel_radius", wheel_radius);
@@ -108,11 +109,21 @@ void Hoverboard::read() {
 
     if ((ros::Time::now() - last_read).toSec() > 1) {
         ROS_FATAL("Timeout reading from serial %s failed", port.c_str());
-    }
+
+        //publish false when not receiving serial data
+        std_msgs::Bool b;
+        b.data = false;
+        connected_pub.publish(b);
+    } else {
+		//we must be connected - publish true
+        std_msgs::Bool b;
+        b.data = true;
+        connected_pub.publish(b);
+	}
 }
 
 void Hoverboard::protocol_recv (char byte) {
-    start_frame = ((uint16_t)(byte) << 8) | prev_byte;
+    start_frame = ((uint16_t)(byte) << 8) | (uint8_t)prev_byte;
 
     // Read the start frame
     if (start_frame == START_FRAME) {
@@ -217,9 +228,40 @@ void Hoverboard::on_encoder_update (int16_t right, int16_t left) {
     posL = left + multL*(ENCODER_MAX-ENCODER_MIN);
     last_wheelcountL = left;
 
-    // Convert position in ticks to position in radians
-    joints[0].pos.data = 2.0*M_PI * posL/(double)TICKS_PER_ROTATION;
-    joints[1].pos.data = 2.0*M_PI * posR/(double)TICKS_PER_ROTATION;
+    // When the board shuts down and restarts, wheel ticks are reset to zero so the robot can be suddently lost
+    // This section accumulates ticks even if board shuts down and is restarted   
+    static double lastPosL = 0.0, lastPosR = 0.0;
+    static double lastPubPosL = 0.0, lastPubPosR = 0.0;
+    static bool nodeStartFlag = true;
+    
+    //IF there has been a pause in receiving data AND the new number of ticks is close to zero, indicates a board restard
+    //(the board seems to often report 1-3 ticks on startup instead of zero)
+    //reset the last read ticks to the startup values
+    if((ros::Time::now() - last_read).toSec() > 0.2
+		&& abs(posL) < 5 && abs(posR) < 5){
+            lastPosL = posL;
+            lastPosR = posR;
+	}
+    double posLDiff = 0;
+    double posRDiff = 0;
+
+    //if node is just starting keep odom at zeros
+	if(nodeStartFlag){
+		nodeStartFlag = false;
+	}else{
+            posLDiff = posL - lastPosL;
+            posRDiff = posR - lastPosR;
+	}
+
+    lastPubPosL += posLDiff;
+    lastPubPosR += posRDiff;
+    lastPosL = posL;
+    lastPosR = posR;
+    
+    // Convert position in accumulated ticks to position in radians
+    joints[0].pos.data = 2.0*M_PI * lastPubPosL/(double)TICKS_PER_ROTATION;
+    joints[1].pos.data = 2.0*M_PI * lastPubPosR/(double)TICKS_PER_ROTATION;
+
     pos_pub[0].publish(joints[0].pos);
     pos_pub[1].publish(joints[1].pos);
 }
