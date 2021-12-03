@@ -8,5 +8,11 @@ If you're looking for the version of Hoverboard driver for
 
 This driver is built for [Robaka](https://github.com/alex-makarov/robaka-ros), a prototyping robotic platform based on hoverboard, Jetson Nano and a bunch of sensors. There is a [Slack community](https://join.slack.com/t/robaka/shared_invite/zt-q52yfvnl-IP0h~JDOmgh3VmJ7Hh69Jw) for Robaka.
 
+## Usage
+
+1. Hoverboard port can be set as a "port" parameter in the node namespace. Check `hoverboard.launch` and `4x4.launch` for examples of 2WD and 4WD configurations. 4WD config is purely for illustration on how to use several ports, but was **not** tested with two hoverboards.
+2. `roslaunch hoverboard_driver hoverboard.launch`
+3. Use any tool (keyboard_teleop, rqt) to send speed commands to `hoverboard_velocity_controller/cmd_vel`.
+
 ## DISCLAIMER
 I bear **no responsibility** for any damage, direct or indirect, caused by using this project. Hoverboards are powerful and can be dangerous! Make sure you take all safety precautions!

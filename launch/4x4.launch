@@ -1,0 +1,10 @@
+<launch>
+    <group ns="front">
+        <param name="port" type="str" value="/dev/ttyTHS1"/>
+        <include file="$(find hoverboard_driver)/launch/hoverboard.launch" />
+    </group>
+    <group ns="rear">
+        <param name="port" type="str" value="/dev/ttyTHS2"/>
+        <include file="$(find hoverboard_driver)/launch/hoverboard.launch" />
+    </group>
+</launch>

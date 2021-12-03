@@ -1,7 +1,6 @@
 #pragma once
 
-#define PORT "/dev/ttyTHS1"
-#define DIRECTION_CORRECTION 1
+#define DEFAULT_PORT "/dev/ttyTHS1"
 
 #define ENCODER_MIN 0
 #define ENCODER_MAX 9000

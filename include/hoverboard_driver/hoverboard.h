@@ -7,6 +7,7 @@
 #include <std_msgs/Float64.h>
 #include <std_msgs/Bool.h>
 #include <dynamic_reconfigure/server.h>
+#include <string>
 #include "hoverboard_driver/HoverboardConfig.h"
 #include "hoverboard_driver/pid.h"
 #include "protocol.h"
@@ -47,6 +48,9 @@ public:
 
     double wheel_radius;
     double max_velocity = 0.0;
+    int direction_correction = 1;
+    std::string port;
+
     ros::Time last_read;
     // Last known encoder values
     int16_t last_wheelcountR;
