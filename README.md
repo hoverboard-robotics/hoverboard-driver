@@ -14,5 +14,21 @@ This driver is built for [Robaka](https://github.com/alex-makarov/robaka-ros), a
 2. `roslaunch hoverboard_driver hoverboard.launch`
 3. Use any tool (keyboard_teleop, rqt) to send speed commands to `hoverboard_velocity_controller/cmd_vel`.
 
+In 4x4 configuration, if you want to control both axis with the same `cmd_vel`, you can apply remapping as following:
+```xml
+<launch>
+    <group ns="front">
+        <param name="port" type="str" value="/dev/ttyTHS1"/>
+        <remap from="/front/hoverboard_velocity_controller/cmd_vel" to="/cmd_vel"/>
+        <include file="$(find hoverboard_driver)/launch/hoverboard.launch" />
+    </group>
+    <group ns="rear">
+        <param name="port" type="str" value="/dev/ttyTHS2"/>
+        <remap from="/rear/hoverboard_velocity_controller/cmd_vel" to="/cmd_vel"/>
+        <include file="$(find hoverboard_driver)/launch/hoverboard.launch" />
+    </group>
+</launch>
+```
+
 ## DISCLAIMER
 I bear **no responsibility** for any damage, direct or indirect, caused by using this project. Hoverboards are powerful and can be dangerous! Make sure you take all safety precautions!
