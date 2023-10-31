@@ -1,42 +1,76 @@
-cmake_minimum_required(VERSION 2.8.3)
-project(hoverboard_driver)
+cmake_minimum_required(VERSION 3.16)
+project(hoverboard_driver  LANGUAGES CXX)
 
-add_compile_options(-std=c++11)
+if(CMAKE_CXX_COMPILER_ID MATCHES "(GNU|Clang)")
+  add_compile_options(-Wall -Wextra)
+endif()
 
-find_package(catkin REQUIRED COMPONENTS
-  roscpp
-  std_msgs
+# find dependencies
+set(THIS_PACKAGE_INCLUDE_DEPENDS
   hardware_interface
-  controller_manager
-  dynamic_reconfigure
+  pluginlib
+  rclcpp
+  rclcpp_lifecycle
   control_toolbox
-  rosparam_shortcuts
 )
 
-## System dependencies are found with CMake's conventions
-find_package(Boost REQUIRED COMPONENTS system)
+# find dependencies
+find_package(ament_cmake REQUIRED)
+foreach(Dependency IN ITEMS ${THIS_PACKAGE_INCLUDE_DEPENDS})
+  find_package(${Dependency} REQUIRED)
+endforeach()
 
-generate_dynamic_reconfigure_options(
-  config/Hoverboard.cfg
+
+## COMPILE
+add_library(
+  hoverboard_driver 
+  SHARED
+  hardware/hoverboard_driver.cpp
+  hardware/pid.cpp
+)
+target_compile_features(hoverboard_driver  PUBLIC cxx_std_17)
+target_include_directories(hoverboard_driver  PUBLIC
+$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/hardware/include>
+$<INSTALL_INTERFACE:include/hoverboard_driver>
 )
 
-catkin_package(
-  INCLUDE_DIRS include
+ament_target_dependencies(
+  hoverboard_driver PUBLIC
+  ${THIS_PACKAGE_INCLUDE_DEPENDS}
 )
 
-include_directories(
- include
- include/hoverboard_driver
-  ${catkin_INCLUDE_DIRS}
- ${Boost_INCLUDE_DIRS}
+# Causes the visibility macros to use dllexport rather than dllimport,
+# which is appropriate when building the dll but not consuming it.
+target_compile_definitions(${PROJECT_NAME} PRIVATE "HOVERBOARD_DRIVER_BUILDING_DLL")
+
+# Export hardware plugins
+pluginlib_export_plugin_description_file(hardware_interface hoverboard_driver.xml)
+
+# INSTALL
+install(
+  DIRECTORY hardware/include/
+  DESTINATION include/hoverboard_driver 
+)
+install(
+  DIRECTORY description/launch description/ros2_control description/urdf
+  DESTINATION share/hoverboard_driver 
+)
+install(
+  DIRECTORY bringup/launch bringup/config
+  DESTINATION share/hoverboard_driver 
+)
+install(TARGETS hoverboard_driver 
+  EXPORT export_hoverboard_driver 
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
 )
 
-add_executable(${PROJECT_NAME} 
-  src/hoverboard.cpp 
-  src/pid.cpp
-  src/main.cpp
-)
-target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${Boost_LIBRARIES})
+if(BUILD_TESTING)
+  find_package(ament_cmake_gtest REQUIRED)
+endif()
 
-add_dependencies(hoverboard_driver ${PROJECT_NAME}_gencfg)
-
+## EXPORTS
+ament_export_targets(export_hoverboard_driver HAS_LIBRARY_TARGET)
+ament_export_dependencies(${THIS_PACKAGE_INCLUDE_DEPENDS})
+ament_package()
