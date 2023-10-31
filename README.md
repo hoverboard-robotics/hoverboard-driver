@@ -6,7 +6,10 @@ ROS hardware driver for UART-controlled hoverboard. Can be used with [diff_drive
 If you're looking for the version of Hoverboard driver for 
  [bipropellant firmware](https://github.com/bipropellant/bipropellant-hoverboard-firmware), check the respective branch.
 
-This driver is built for [Robaka](https://github.com/alex-makarov/robaka-ros), a prototyping robotic platform based on hoverboard, Jetson Nano and a bunch of sensors. There is a [Slack community](https://join.slack.com/t/robaka/shared_invite/zt-q52yfvnl-IP0h~JDOmgh3VmJ7Hh69Jw) for Robaka.
+This driver is built for [Robaka](https://github.com/alex-makarov/robaka-ros), a prototyping robotic platform based on hoverboard, Jetson Nano and a bunch of sensors. Please use Github discussion to get in touch.
+
+# ROS2
+Looking for a ROS2 driver? Have a look at humble branch. https://github.com/hoverboard-robotics/hoverboard-driver/tree/humble
 
 ## Usage
 
