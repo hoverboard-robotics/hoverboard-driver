@@ -8,7 +8,8 @@ Connect Hoverboard PCB (USART3, GND, TX, RX, no VCC!!) to USB-TTL converter (or 
 Set the serial port according to your setup in hoverboard_driver.ros2_control.xacro file
 
 # Launch
-```ros2 launch hoverboard_driver diffbot.launch.py
+```
+ros2 launch hoverboard_driver diffbot.launch.py
 ```
 
 # Classes
