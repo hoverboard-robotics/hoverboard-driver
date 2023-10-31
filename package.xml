@@ -1,26 +1,42 @@
 <?xml version="1.0"?>
-<package format="2">
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
   <name>hoverboard_driver</name>
-  <version>0.0.1</version>
-  <description>Driver for hoverboard motors</description>
-  <maintainer email="road.and.track@gmail.com">road.and.track@gmail.com</maintainer>
-  <license>BSD</license>
-  <buildtool_depend>catkin</buildtool_depend>
-  <build_depend>roscpp</build_depend>
-  <build_depend>std_msgs</build_depend>
-  <build_depend>hardware_interface</build_depend>
-  <build_depend>controller_manager</build_depend>
-  <build_depend>control_toolbox</build_depend>
-  <build_depend>rosparam_shortcuts</build_depend>
-  <build_export_depend>roscpp</build_export_depend>
-  <build_export_depend>std_msgs</build_export_depend>
-  <exec_depend>roscpp</exec_depend>
-  <exec_depend>std_msgs</exec_depend>
-  <exec_depend>hardware_interface</exec_depend>
+  <version>0.0.0</version>
+  <description>Demo package of `ros2_control` hardware for DiffBot.</description>
+
+  <maintainer email="denis.stogl@stoglrobotics.de">Dr.-Ing. Denis Štogl</maintainer>
+  <maintainer email="bence.magyar.robotics@gmail.com">Bence Magyar</maintainer>
+  <maintainer email="christoph.froehlich@ait.ac.at">Christoph Froehlich</maintainer>
+
+  <author email="denis.stogl@stoglrobotics.de">Dr.-Ing. Denis Štogl</author>
+
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>hardware_interface</depend>
+  <depend>pluginlib</depend>
+  <depend>rclcpp</depend>
+  <depend>rclcpp_lifecycle</depend>
+  
+
   <exec_depend>controller_manager</exec_depend>
-  <exec_depend>rosparam_shortcuts</exec_depend>
+  <exec_depend>diff_drive_controller</exec_depend>
+  <exec_depend>joint_state_broadcaster</exec_depend>
+  <exec_depend>joint_state_publisher_gui</exec_depend>
+  <exec_depend>robot_state_publisher</exec_depend>
+  <!--<exec_depend>ros2_control_demo_description</exec_depend> -->
+  <exec_depend>ros2_controllers_test_nodes</exec_depend>
+  <exec_depend>ros2controlcli</exec_depend>
+  <exec_depend>ros2launch</exec_depend>
+  <exec_depend>rviz2</exec_depend>
+  <exec_depend>xacro</exec_depend>
   <exec_depend>control_toolbox</exec_depend>
-  <depend>dynamic_reconfigure</depend>
+
+  <test_depend>ament_cmake_gtest</test_depend>
+
   <export>
+    <build_type>ament_cmake</build_type>
   </export>
 </package>

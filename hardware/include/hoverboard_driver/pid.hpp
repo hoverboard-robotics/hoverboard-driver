@@ -1,9 +1,6 @@
 // This file is based on work by Franz Pucher, Diffbot, (2020), GitHub repository, https://github.com/fjp/diffbot
-#include <ros/duration.h>
-#include <control_toolbox/pid.h>
-// Dynamic reconfigure
-#include <dynamic_reconfigure/server.h>
-#include "hoverboard_driver/HoverboardConfig.h"
+#include <rclcpp/duration.hpp>
+#include <control_toolbox/pid.hpp>
 #include <boost/thread/mutex.hpp>
 
 class PID : public control_toolbox::Pid
@@ -25,7 +22,6 @@ class PID : public control_toolbox::Pid
         /**
          * @brief Initialize the 
          * 
-         * @param nh ROS node handle with possible namespace describing the purpose of the PID controller.
          * @param kF The feed forward gain.
          * @param kP The proportional gain.
          * @param kI The integral gain.
@@ -36,7 +32,7 @@ class PID : public control_toolbox::Pid
          * @param out_min The min computed output.
          * @param out_max The max computed output.
          */
-        void init(ros::NodeHandle& nh, double f, double p, double i, double d, double i_max, double i_min, bool antiwindup, double out_max, double out_min);
+        void init(double f, double p, double i, double d, double i_max, double i_min, bool antiwindup, double out_max, double out_min);
 
         /**
          * @brief Compute PID output value from error using process value, set point and time period
@@ -46,7 +42,7 @@ class PID : public control_toolbox::Pid
          * @param dt The delta time or period since the last call.
          * @return double Computed PID output value.
          */
-        double operator()(const double &measured_value, const double &setpoint, const ros::Duration &dt);
+        double operator()(const double &measured_value, const double &setpoint, const rclcpp::Duration &dt);
 
         /**
          * @brief Get the FPID parameters
@@ -104,31 +100,32 @@ class PID : public control_toolbox::Pid
          * @brief Start the dynamic reconfigure node and load the default values
          * @param node - a node handle where dynamic reconfigure services will be published
          */
-        void initDynamicReconfig(ros::NodeHandle &node);
+       // void initDynamicReconfig(ros::NodeHandle &node);
 
         /**
          * @brief Set Dynamic Reconfigure's gains to PID's values
          */
-        void updateDynamicReconfig();
-        void updateDynamicReconfig(Gains gains_config);
-        void updateDynamicReconfig(hoverboard_driver::HoverboardConfig config);
+        //void updateDynamicReconfig();
+        //void updateDynamicReconfig(Gains gains_config);
+        //void updateDynamicReconfig(hoverboard_driver::HoverboardConfig config);
 
         /**
          * \brief Update the PID parameters from dynamics reconfigure
          */
-        void dynamicReconfigCallback(hoverboard_driver::HoverboardConfig &config, uint32_t /*level*/);
+        //void dynamicReconfigCallback(hoverboard_driver::HoverboardConfig &config, uint32_t /*level*/);
 
     private:
         double f_;
         double error_;
         double out_min_;
         double out_max_;
+        rclcpp::Node::SharedPtr node_;
 
         // Dynamic reconfigure
         bool dynamic_reconfig_initialized_;
-        typedef dynamic_reconfigure::Server<hoverboard_driver::HoverboardConfig> DynamicReconfigServer;
-        boost::shared_ptr<DynamicReconfigServer> param_reconfig_server_;
-        DynamicReconfigServer::CallbackType param_reconfig_callback_;
+       // typedef dynamic_reconfigure::Server<hoverboard_driver::HoverboardConfig> DynamicReconfigServer;
+        //boost::shared_ptr<DynamicReconfigServer> param_reconfig_server_;
+        //DynamicReconfigServer::CallbackType param_reconfig_callback_;
 
-        boost::recursive_mutex param_reconfig_mutex_;
+      //  boost::recursive_mutex param_reconfig_mutex_;
 };
