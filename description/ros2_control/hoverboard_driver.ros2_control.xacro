@@ -8,7 +8,7 @@
         <plugin>hoverboard_driver/hoverboard_driver</plugin>
         <param name="wheel_radius">0.0825</param>
         <param name="max_velocity">1.0</param>
-        <param name="device">/dev/ttyUSB2</param>
+        <param name="device">/dev/serial/by-id/usb-FTDI_Quad_RS232-HS-if01-port0</param>
       </hardware>
       <joint name="${prefix}left_wheel_joint">
         <command_interface name="velocity"/>
