@@ -49,6 +49,5 @@ To activate, change this code section in hoverboard_driver.cpp
 # TODO
 - add serial port as argument to launch file
 - add working PID controller
-- mapping /cmd_vel to hoverboard_driver_base/cmd_vel_unstamped not working now
 - split hoverboard_driver.cpp classes into separate files
 - clean up name mixup between hoverboard and diffbot to be more clear
