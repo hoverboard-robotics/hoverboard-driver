@@ -5,7 +5,9 @@ Find the documentation in [doc/userdoc.rst](doc/userdoc.rst) or on [control.ros.
 
 # Hints
 Connect Hoverboard PCB (USART3, GND, TX, RX, no VCC!!) to USB-TTL converter (or UART interface of your SBC).
-Set the serial port according to your setup in hoverboard_driver.ros2_control.xacro file
+Set the serial port according to your setup in hoverboard_driver.ros2_control.xacro file.
+
+Can also be used with [gen2.x firmware](https://github.com/RoboDurden/Hoverboard-Firmware-Hack-Gen2.x-GD32) for splitboard hoverboards (with RemoteROS2 configured in [config.h](https://github.com/RoboDurden/Hoverboard-Firmware-Hack-Gen2.x-GD32/blob/main/HoverBoardGigaDevice/Inc/config.h)).
 
 # Launch
 ```
