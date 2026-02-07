@@ -45,6 +45,8 @@ namespace hoverboard_driver
     curr_pub[left_wheel] = this->create_publisher<std_msgs::msg::Float64>("hoverboard/left_wheel/dc_current", 3);
     curr_pub[right_wheel] = this->create_publisher<std_msgs::msg::Float64>("hoverboard/right_wheel/dc_current", 3);
     connected_pub = this->create_publisher<std_msgs::msg::Bool>("hoverboard/connected", 3);
+    imu_pub[0] = this->create_publisher<sensor_msgs::msg::Imu>("hoverboard/imu0/data", 3);
+    imu_pub[1] = this->create_publisher<sensor_msgs::msg::Imu>("hoverboard/imu1/data", 3);
 
     declare_parameter("f", 10.2);
     declare_parameter("p", 1.0);
@@ -113,6 +115,52 @@ namespace hoverboard_driver
     std_msgs::msg::Bool f;
     f.data = message;
     connected_pub->publish(f);
+  }
+
+  void hoverboard_driver_node::publish_imu(const SerialImu& message, const rclcpp::Time &time)
+  {
+    if (!imu_enabled_) {
+      return; // IMU publishing is disabled
+    }
+    sensor_msgs::msg::Imu imu_msg;
+    imu_msg.header.stamp = time;
+    if (message.imuId == 0) {
+      imu_msg.header.frame_id = imu0_frame_id_;
+    } else if (message.imuId == 1) {
+      imu_msg.header.frame_id = imu1_frame_id_;
+    } else {
+      RCLCPP_WARN(get_logger(), "Received IMU message with invalid imuId: %d", message.imuId);
+      return;
+    }
+
+    // Convert raw IMU data to SI units
+    double a_scale = 9.80665 / 16384.0; // assuming +/-2g range
+    imu_msg.linear_acceleration.x = (double)message.accelX * a_scale;
+    imu_msg.linear_acceleration.y = (double)message.accelY * a_scale;
+    imu_msg.linear_acceleration.z = (double)message.accelZ * a_scale;
+
+    double g_scale = (M_PI / 180.0) / 131.0; // assuming +/-250 deg/s range
+    imu_msg.angular_velocity.x = (double)message.gyroX * g_scale;
+    imu_msg.angular_velocity.y = (double)message.gyroY * g_scale;
+    imu_msg.angular_velocity.z = (double)message.gyroZ * g_scale;
+
+    // Use configured covariance diagonals
+    imu_msg.linear_acceleration_covariance = {
+        linear_acceleration_covariance_diagonal_[0], 0.0, 0.0,
+        0.0, linear_acceleration_covariance_diagonal_[1], 0.0,
+        0.0, 0.0, linear_acceleration_covariance_diagonal_[2]
+    };
+
+    imu_msg.angular_velocity_covariance = {
+        angular_velocity_covariance_diagonal_[0], 0.0, 0.0,
+        0.0, angular_velocity_covariance_diagonal_[1], 0.0,
+        0.0, 0.0, angular_velocity_covariance_diagonal_[2]
+    };
+
+    // Orientation Covariance (rad)^2
+    imu_msg.orientation_covariance[0] = -1.0;
+
+    imu_pub[message.imuId]->publish(imu_msg);
   }
 
   rcl_interfaces::msg::SetParametersResult hoverboard_driver_node::parametersCallback(
@@ -233,6 +281,47 @@ namespace hoverboard_driver
     }
 
     hardware_publisher = std::make_shared<hoverboard_driver_node>(); // fire up the publisher node
+    // Set IMU parameters from hardware_info (URDF)
+    if (info_.hardware_parameters.count("imu_enabled"))
+      hardware_publisher->imu_enabled_ = info_.hardware_parameters["imu_enabled"] == "true" || info_.hardware_parameters["imu_enabled"] == "1";
+    if (info_.hardware_parameters.count("imu0_frame_id"))
+      hardware_publisher->imu0_frame_id_ = info_.hardware_parameters["imu0_frame_id"];
+    if (info_.hardware_parameters.count("imu1_frame_id"))
+      hardware_publisher->imu1_frame_id_ = info_.hardware_parameters["imu1_frame_id"];
+
+    // Parse IMU covariance parameters
+    hardware_publisher->linear_acceleration_covariance_diagonal_ = {0.00025, 0.00025, 0.00025};
+    hardware_publisher->angular_velocity_covariance_diagonal_ = {1.28e-6, 1.28e-6, 1.28e-6};
+    if (info_.hardware_parameters.count("linear_acceleration_covariance_diagonal")) {
+      std::istringstream iss(info_.hardware_parameters["linear_acceleration_covariance_diagonal"]);
+      double v[3];
+      if (iss >> v[0] >> v[1] >> v[2]) {
+        hardware_publisher->linear_acceleration_covariance_diagonal_ = {v[0], v[1], v[2]};
+      } else {
+        RCLCPP_WARN(rclcpp::get_logger("hoverboard_driver"), "linear_acceleration_covariance_diagonal is not 3 values. Using defaults.");
+      }
+    }
+    if (info_.hardware_parameters.count("angular_velocity_covariance_diagonal")) {
+      std::istringstream iss(info_.hardware_parameters["angular_velocity_covariance_diagonal"]);
+      double v[3];
+      if (iss >> v[0] >> v[1] >> v[2]) {
+        hardware_publisher->angular_velocity_covariance_diagonal_ = {v[0], v[1], v[2]};
+      } else {
+        RCLCPP_WARN(rclcpp::get_logger("hoverboard_driver"), "angular_velocity_covariance_diagonal is not 3 values. Using defaults.");
+      }
+    }
+
+    // Error handling for IMU frame IDs
+    if (hardware_publisher->imu_enabled_) {
+      if (hardware_publisher->imu0_frame_id_.empty()) {
+        RCLCPP_ERROR(rclcpp::get_logger("hoverboard_driver"), "imu_enabled is true but imu0_frame_id is not set. Using default: 'imu0_link'.");
+        hardware_publisher->imu0_frame_id_ = "imu0_link";
+      }
+      if (hardware_publisher->imu1_frame_id_.empty()) {
+        RCLCPP_WARN(rclcpp::get_logger("hoverboard_driver"), "imu_enabled is true but imu1_frame_id is not set. Using default: 'imu1_link'.");
+        hardware_publisher->imu1_frame_id_ = "imu1_link";
+      }
+    }
 
     return hardware_interface::CallbackReturn::SUCCESS;
   }
@@ -325,7 +414,7 @@ namespace hoverboard_driver
   }
 
   hardware_interface::return_type hoverboard_driver::read(
-      const rclcpp::Time &time, const rclcpp::Duration &period)
+      const rclcpp::Time &time, const rclcpp::Duration & /*period*/)
   {
     // to be able to compare times, we need to set last_read time to a correct time source
     // set the actual time as last_read, when it hasn't been set before (first attempt to read from harware)
@@ -370,7 +459,7 @@ namespace hoverboard_driver
     start_frame = ((uint16_t)(byte) << 8) | (uint8_t)prev_byte;
 
     // Read the start frame
-    if (start_frame == START_FRAME)
+    if ((start_frame == START_FRAME || start_frame == START_FRAME_IMU) && msg_len == 0)
     {
       p = (char *)&msg;
       *p++ = prev_byte;
@@ -384,7 +473,7 @@ namespace hoverboard_driver
       msg_len++;
     }
 
-    if (msg_len == sizeof(SerialFeedback))
+    if (msg_len == sizeof(SerialFeedback) && msg.start == START_FRAME)
     {
       uint16_t checksum = (uint16_t)(msg.start ^
                                      msg.cmd1 ^
@@ -399,7 +488,7 @@ namespace hoverboard_driver
                                      msg.boardTemp ^
                                      msg.cmdLed);
 
-      if (msg.start == START_FRAME && msg.checksum == checksum)
+      if (msg.checksum == checksum)
       {
         hardware_publisher->publish_voltage((double)msg.batVoltage / 100.0);
         hardware_publisher->publish_temp((double)msg.boardTemp / 10.0);
@@ -422,17 +511,55 @@ namespace hoverboard_driver
       }
       msg_len = 0;
     }
+    else if (msg_len == sizeof(SerialImu) && msg.start == START_FRAME_IMU)
+    {
+      SerialImu& imuMsg = *reinterpret_cast<SerialImu*>(&msg);
+
+      uint16_t checksum = (uint16_t)(imuMsg.start ^
+                                     imuMsg.imuId ^
+                                     imuMsg.accelX ^
+                                     imuMsg.accelY ^
+                                     imuMsg.accelZ ^
+                                     imuMsg.gyroX ^
+                                     imuMsg.gyroY ^
+                                     imuMsg.gyroZ);
+
+      if (imuMsg.checksum == checksum)
+      {
+        hardware_publisher->publish_imu(imuMsg, time);
+      }
+      else
+      {
+        RCLCPP_WARN(rclcpp::get_logger("hoverboard_driver"), "Hoverboard IMU message checksum mismatch: %d vs %d", imuMsg.checksum, checksum);
+      }
+      msg_len = 0;
+    }
     prev_byte = byte;
   }
 
   hardware_interface::return_type hoverboard_driver::hoverboard_driver::write(
-      const rclcpp::Time &time, const rclcpp::Duration &period)
+      const rclcpp::Time & /*time*/, const rclcpp::Duration &period)
   {
     if (port_fd == -1)
     {
       RCLCPP_ERROR(rclcpp::get_logger("hoverboard_driver"), "Attempt to write on closed serial");
       return hardware_interface::return_type::ERROR;
     }
+
+    // Add elapsed time since last write() to last_write
+    last_write += period.seconds();
+
+    if (last_write >= write_period)
+    {
+      // Reset last_write, but keep the remainder to prevent drift
+      last_write -= write_period;
+    }
+    else
+    {
+      // Skip this write cycle
+      return hardware_interface::return_type::OK;
+    }
+
     // Inform interested parties about the commands we've got
     hardware_publisher->publish_cmd(left_wheel, hw_commands_[left_wheel]);
     hardware_publisher->publish_cmd(right_wheel, hw_commands_[right_wheel]);
@@ -540,6 +667,14 @@ namespace hoverboard_driver
     hardware_publisher->publish_pos(right_wheel, hw_positions_[right_wheel]);
   }
 
+  // Destructor is called at Ctrl-C after ros2 launch
+  hoverboard_driver::~hoverboard_driver()
+  {
+    if (port_fd != -1) {
+      close(port_fd);
+      port_fd = -1;
+    }
+  }
 } // namespace hoverboard_driver
 
 #include "pluginlib/class_list_macros.hpp"

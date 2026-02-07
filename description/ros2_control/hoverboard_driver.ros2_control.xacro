@@ -9,6 +9,11 @@
         <param name="wheel_radius">0.0825</param>
         <param name="max_velocity">1.0</param>
         <param name="device">/dev/serial/by-id/usb-FTDI_Quad_RS232-HS-if01-port0</param>
+        <!--<param name="imu_enabled">true</param>-->
+        <!--<param name="imu0_frame_id">imu0_link</param>-->
+        <!--<param name="imu1_frame_id">imu1_link</param>-->
+        <!--<param name="linear_acceleration_covariance_diagonal">0.00025 0.00025 0.00025</param>-->
+        <!--<param name="angular_velocity_covariance_diagonal">1.28e-6 1.28e-6 1.28e-6</param>-->
       </hardware>
       <joint name="${prefix}left_wheel_joint">
         <command_interface name="velocity"/>
