@@ -6,6 +6,7 @@
 #define _FOC_PROTOCOL_H
 
 #define START_FRAME 0xABCD
+#define START_FRAME_IMU 0xACDC
 
 typedef struct {
    uint16_t start;
@@ -29,5 +30,17 @@ typedef struct {
    uint16_t cmdLed;
    uint16_t checksum;
 } SerialFeedback;
+
+typedef struct {
+   uint16_t start;  // START_FRAME_IMU=0xACDC
+   uint16_t imuId;  // 0=imu0(Master board), 1=imu1(Slave board)
+   int16_t  accelX;
+   int16_t  accelY;
+   int16_t  accelZ;
+   int16_t  gyroX;
+   int16_t  gyroY;
+   int16_t  gyroZ;
+   uint16_t checksum;
+} SerialImu;
 
 #endif

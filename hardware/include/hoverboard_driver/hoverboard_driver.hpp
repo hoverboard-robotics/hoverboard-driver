@@ -33,6 +33,7 @@
 #include "hoverboard_driver/protocol.hpp"
 #include "hoverboard_driver/pid.hpp"
 #include "rclcpp/rclcpp.hpp"
+#include "sensor_msgs/msg/imu.hpp"
 #include "std_msgs/msg/float64.hpp"
 #include "std_msgs/msg/bool.hpp"
 #include "rcl_interfaces/msg/set_parameters_result.hpp"
@@ -87,6 +88,10 @@ namespace hoverboard_driver
     /// @param message value to publish
     void publish_connected(bool message);
 
+    /// @brief publish IMU data
+    /// @param message value to publish
+    void publish_imu(const SerialImu& message, const rclcpp::Time &time);
+
     /// @brief parameter callback method. 
     /// @param parameters 
     /// @return 
@@ -105,6 +110,14 @@ namespace hoverboard_driver
       bool antiwindup;
     } pid_config;
 
+    // IMU configuration
+    std::string imu0_frame_id_;
+    std::string imu1_frame_id_;
+    bool imu_enabled_ = false;
+
+    std::array<double, 3> linear_acceleration_covariance_diagonal_;
+    std::array<double, 3> angular_velocity_covariance_diagonal_;
+
   private:
     // Publishers
     rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr vel_pub[2];
@@ -114,6 +127,7 @@ namespace hoverboard_driver
     rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr curr_pub[2];
     rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr temp_pub;
     rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr connected_pub;
+    rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr imu_pub[2];
 
         // Parameter Callback handle
     OnSetParametersCallbackHandle::SharedPtr callback_handle_;
@@ -124,6 +138,7 @@ namespace hoverboard_driver
   {
   public:
     RCLCPP_SHARED_PTR_DEFINITIONS(hoverboard_driver);
+    ~hoverboard_driver() override;
 
     hardware_interface::CallbackReturn on_init(
         const hardware_interface::HardwareInfo &info) override;
@@ -178,9 +193,12 @@ namespace hoverboard_driver
     char prev_byte = 0;
     uint16_t start_frame = 0;
     char *p;
-    SerialFeedback msg, prev_msg;
+    SerialFeedback msg;
 
     PID pids[2];
+
+    double last_write = 0.0; // Time since last write() in seconds
+    const double write_period = 0.1; // Period between writes in seconds. 0.1s = 100ms = 10Hz
   };
 
 } // namespace hoverboard_driver

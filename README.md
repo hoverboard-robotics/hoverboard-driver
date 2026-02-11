@@ -46,7 +46,16 @@ To activate, change this code section in hoverboard_driver.cpp
            hw_commands_[left_wheel] / 0.10472,
            hw_commands_[right_wheel] / 0.10472
      };
-     ```
+```
+
+# IMU
+
+The [gen2.x firmware](https://github.com/RoboDurden/Hoverboard-Firmware-Hack-Gen2.x-GD32) supports sending IMU data (gyroscope and accelerometer) from hoverboard.
+The IMU data can be used in a Extended Kalman filter (EKF) from [robot_localization](https://docs.ros.org/en/noetic/api/robot_localization/html/index.html) package for improved localization. The EKF can be used for [smoothing odometry](https://docs.nav2.org/setup_guides/odom/setup_robot_localization.html) between wheel encoder updates by fusing IMU data with wheel encoders and compensate for eg. wheel slippage.
+IMU can be enabled using parameter imu_enabled in hoverboard_driver.ros2_control.xacro (and the hoverboard firmware also of course needs to be configured to send IMU data).
+The gen2.x firmware sends IMU data every 10 ms, so update_rate in hoverboard_controllers.yaml should be updated to 100 Hz. This will cause read() to be called every 10 ms (otherwise with 10 Hz the timestamps in the IMU messages will be the same and there will be no IMU messages between the wheel encoder feedback messages, which defeats the purpose of the IMU messages). It will also cause write() to be called every 10ms, but there is a write_period constant that makes sure that speed commands are only sent every 100ms to hoverboard.
+The parameter publish_rate in hoverboard_controllers.yaml can be used to further tune the wheel odometry update rate (publish_rate can also be added to joint_state_broadcaster) to limit load on network or cpu with update_rate 100 Hz if needed.
+The default values of the covariance matrices are calculated from MPU6500 datasheet. They can be configured with the linear_acceleration_covariance_diagonal and angular_velocity_covariance_diagonal parameters in hoverboard_driver.ros2_control.xacro. If the EKF becomes twitchy, increase these values by a factor of 10 to account for eg. hoverboard vibrations.
 
 # TODO
 - add serial port as argument to launch file
