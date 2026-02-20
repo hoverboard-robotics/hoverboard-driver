@@ -2,6 +2,7 @@
 #include <rclcpp/duration.hpp>
 #include <control_toolbox/pid.hpp>
 #include <boost/thread/mutex.hpp>
+#include "rclcpp/rclcpp.hpp"
 
 class PID : public control_toolbox::Pid
 {
